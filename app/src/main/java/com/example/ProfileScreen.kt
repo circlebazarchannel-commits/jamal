@@ -12,6 +12,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -95,10 +101,18 @@ fun ProfileScreen(
     
     // Persistent profile state - remove demo defaults
     var userName by remember(currentUser) { 
-        mutableStateOf(currentUser?.userMetadata?.get("full_name")?.toString() ?: if (GlobalLanguage.isEnglish) "Guest User" else "অতিথি ইউজার") 
+        mutableStateOf(
+            sharedPrefs.getString("user_name", "")?.takeIf { it.isNotEmpty() }
+            ?: currentUser?.userMetadata?.get("full_name")?.toString()?.replace("\"", "")
+            ?: if (GlobalLanguage.isEnglish) "Guest User" else "অতিথি ইউজার"
+        ) 
     }
     var userEmail by remember(currentUser) { 
-        mutableStateOf(currentUser?.email ?: "") 
+        mutableStateOf(
+            sharedPrefs.getString("user_email", "")?.takeIf { it.isNotEmpty() }
+            ?: currentUser?.email
+            ?: ""
+        ) 
     }
     var userPhone by remember { mutableStateOf(sharedPrefs.getString("user_phone", "") ?: "") }
     var userGender by remember { mutableStateOf(sharedPrefs.getString("user_gender", "") ?: "") }
@@ -266,6 +280,21 @@ fun ProfileScreen(
                                             // Handle error
                                         }
                                     }
+                                }
+
+                                // Sync with Firestore if logged in
+                                currentUser?.id?.let { uid ->
+                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                    val updates = hashMapOf<String, Any>(
+                                        "name" to name,
+                                        "email" to email,
+                                        "profileImageUrl" to customUri,
+                                        "selectedLogoIndex" to logoIdx,
+                                        "gender" to gender,
+                                        "phone" to phone,
+                                        "location" to location
+                                    )
+                                    db.collection("users").document(uid).set(updates, com.google.firebase.firestore.SetOptions.merge())
                                 }
                     
                     sharedPrefs.edit().apply {
@@ -483,6 +512,17 @@ fun ProfileScreen(
                         .padding(horizontal = 16.dp)
                 ) {
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        
+                        // Edit Profile Option Row
+                        ProfileOptionRow(
+                            title = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Edit Profile" else "প্রোফাইল এডিট করুন",
+                            icon = Icons.Filled.Edit,
+                            iconColor = PrimaryGreen,
+                            onClick = {
+                                showEditFullScreen = true
+                            }
+                        )
+                        ProfileDivider()
                         
                         // Action Row mapping to Full-Screen Tracker History Page
                         ProfileOptionRow(
@@ -862,6 +902,179 @@ fun ProfileScreen(
     }
 }
 
+fun cropAndSaveImage(
+    context: android.content.Context,
+    sourceUri: Uri,
+    zoom: Float,
+    rotation: Float,
+    offsetX: Float,
+    offsetY: Float,
+    onSuccess: (Uri) -> Unit,
+    onFailure: (Exception) -> Unit
+) {
+    try {
+        context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+            val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            if (originalBitmap == null) {
+                onFailure(Exception("Cannot decode bitmap"))
+                return
+            }
+            
+            val matrix = android.graphics.Matrix()
+            matrix.postRotate(rotation)
+            matrix.postScale(zoom, zoom)
+            
+            val scaledBitmap = android.graphics.Bitmap.createBitmap(
+                originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true
+            )
+            
+            val size = minOf(scaledBitmap.width, scaledBitmap.height)
+            
+            // Adjust offsets with zoom level to avoid out-of-bounds crops
+            val maxOffsetWidth = (scaledBitmap.width - size).toFloat()
+            val maxOffsetHeight = (scaledBitmap.height - size).toFloat()
+            
+            // Normalize pan offsets based on standard scale representation
+            val calculatedOffsetX = ((scaledBitmap.width - size) / 2f + offsetX).coerceIn(0f, maxOffsetWidth)
+            val calculatedOffsetY = ((scaledBitmap.height - size) / 2f + offsetY).coerceIn(0f, maxOffsetHeight)
+            
+            val croppedBitmap = android.graphics.Bitmap.createBitmap(
+                scaledBitmap,
+                calculatedOffsetX.toInt(),
+                calculatedOffsetY.toInt(),
+                size,
+                size
+            )
+            
+            val croppedFile = java.io.File(context.filesDir, "custom_profile_picture.jpg")
+            java.io.FileOutputStream(croppedFile).use { out ->
+                croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+            }
+            
+            onSuccess(Uri.fromFile(croppedFile))
+        }
+    } catch (e: Exception) {
+        onFailure(e)
+    }
+}
+
+@Composable
+fun CropZoomRotateDialog(
+    imageUri: Uri,
+    onDismiss: () -> Unit,
+    onConfirm: (zoom: Float, rotation: Float, offsetX: Float, offsetY: Float) -> Unit
+) {
+    var zoomScale by remember { mutableFloatStateOf(1f) }
+    var rotationDegrees by remember { mutableFloatStateOf(0f) }
+    var panX by remember { mutableFloatStateOf(0f) }
+    var panY by remember { mutableFloatStateOf(0f) }
+    val isEn = com.example.viewmodel.GlobalLanguage.isEnglish
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = if (isEn) "Crop, Zoom & Rotate" else "ক্রপ, জুম এবং রিসাইজ করুন",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = TextDark,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Interactive Cropper Box containing circular viewport
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF3F4F6))
+                        .border(2.dp, PrimaryGreen, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    coil.compose.AsyncImage(
+                        model = imageUri,
+                        contentDescription = "Crop Preview",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = zoomScale,
+                                scaleY = zoomScale,
+                                rotationZ = rotationDegrees,
+                                translationX = panX,
+                                translationY = panY
+                            )
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, _, _ ->
+                                    panX += pan.x
+                                    panY += pan.y
+                                }
+                            }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Zoom control slider
+                Text(
+                    text = (if (isEn) "Zoom: " else "জুম: ") + String.format(Locale.US, "%.1fx", zoomScale),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextDark
+                )
+                Slider(
+                    value = zoomScale,
+                    onValueChange = { zoomScale = it },
+                    valueRange = 1f..3f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PrimaryGreen,
+                        activeTrackColor = PrimaryGreen
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Rotation control slider
+                Text(
+                    text = (if (isEn) "Rotation: " else "ঘোরান: ") + "${rotationDegrees.toInt()}°",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextDark
+                )
+                Slider(
+                    value = rotationDegrees,
+                    onValueChange = { rotationDegrees = it },
+                    valueRange = 0f..360f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PrimaryGreen,
+                        activeTrackColor = PrimaryGreen
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(zoomScale, rotationDegrees, panX, panY) },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+            ) {
+                Text(if (isEn) "Apply" else "প্রয়োগ করুন", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(if (isEn) "Cancel" else "বাতিল", color = Color.Red)
+            }
+        }
+    )
+}
+
 // Full screen Edit Profile Screen Composable with high-fidelity inputs
 @Composable
 fun EditProfileScreen(
@@ -884,6 +1097,7 @@ fun EditProfileScreen(
     var editLogoIndex by remember { mutableIntStateOf(currentLogoIndex) }
     var editCustomAvatarUri by remember { mutableStateOf(currentCustomAvatarUri) }
     var isUploadingToTelegram by remember { mutableStateOf(false) }
+    var selectedCropImageUri by remember { mutableStateOf<Uri?>(null) }
     
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -892,93 +1106,110 @@ fun EditProfileScreen(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { selectedUri ->
-            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    isUploadingToTelegram = true
-                    val copiedFile = java.io.File(context.filesDir, "custom_profile_picture.jpg")
+            selectedCropImageUri = selectedUri
+        }
+    }
+
+    if (selectedCropImageUri != null) {
+        CropZoomRotateDialog(
+            imageUri = selectedCropImageUri!!,
+            onDismiss = { selectedCropImageUri = null },
+            onConfirm = { zoom, rotation, offsetX, offsetY ->
+                val sourceUri = selectedCropImageUri!!
+                selectedCropImageUri = null
+                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
-                        context.contentResolver.openInputStream(selectedUri)?.use { inputStream ->
-                            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                            if (bitmap != null) {
-                                java.io.FileOutputStream(copiedFile).use { outStream ->
-                                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, outStream)
-                                }
-                            } else {
-                                context.contentResolver.openInputStream(selectedUri)?.use { input ->
-                                    java.io.FileOutputStream(copiedFile).use { output ->
-                                        input.copyTo(output)
-                                    }
-                                }
-                            }
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            isUploadingToTelegram = true
                         }
-                    } catch (ex: Exception) {
-                        ex.printStackTrace()
-                        context.contentResolver.openInputStream(selectedUri)?.use { input ->
-                            java.io.FileOutputStream(copiedFile).use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                    }
-                    
-                    val fileUriStr = Uri.fromFile(copiedFile).toString()
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        editCustomAvatarUri = fileUriStr
-                    }
-                    
-                    val chatId = "-1002647379129"
-                    val botToken = "8968904429:AAE3Ce849ysMuaxQhdMebsBwyB_nlIPQ1Os"
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                        .build()
                         
-                    val bodyBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
-                        .addFormDataPart("chat_id", chatId)
-                        .addFormDataPart("caption", "👤 **নতুন প্রোফাইল ছবি আপডেট করা হয়েছে!**\n\n**ব্যবহারকারীর নাম:** $editName")
-                        
-                    val fileBody = RequestBody.create("image/jpeg".toMediaTypeOrNull(), copiedFile)
-                    bodyBuilder.addFormDataPart("photo", "profile.jpg", fileBody)
-                    
-                    val request = Request.Builder()
-                        .url("https://api.telegram.org/bot$botToken/sendPhoto")
-                        .post(bodyBuilder.build())
-                        .build()
-                        
-                    client.newCall(request).execute().use { response ->
-                        val responseBody = response.body?.string()
-                        android.util.Log.d("TelegramProfilePic", "Upload success: ${response.isSuccessful}, body: $responseBody")
-                        if (response.isSuccessful && responseBody != null) {
-                            val json = org.json.JSONObject(responseBody)
-                            if (json.optBoolean("ok")) {
-                                val result = json.optJSONObject("result")
-                                val photoArray = result?.optJSONArray("photo")
-                                if (photoArray != null && photoArray.length() > 0) {
-                                    val lastPhoto = photoArray.optJSONObject(photoArray.length() - 1)
-                                    val fileId = lastPhoto?.optString("file_id") ?: ""
-                                    if (fileId.isNotEmpty()) {
-                                        val proxyUrl = "https://script.google.com/macros/s/AKfycbyse-oVHrCgGjsCtN7q_TaCEf6YIGKxWkpjL9ILq_Uems0odlikDcO9dAIUMWTlWQ4B8Q/exec"
-                                        val webUrl = "$proxyUrl?action=stream&file_id=$fileId"
+                        cropAndSaveImage(
+                            context = context,
+                            sourceUri = sourceUri,
+                            zoom = zoom,
+                            rotation = rotation,
+                            offsetX = offsetX,
+                            offsetY = offsetY,
+                            onSuccess = { croppedUri ->
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    try {
+                                        val copiedFile = java.io.File(croppedUri.path ?: "")
+                                        val fileUriStr = croppedUri.toString()
                                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                            editCustomAvatarUri = webUrl
+                                            editCustomAvatarUri = fileUriStr
+                                        }
+                                        
+                                        val chatId = "-1002647379129"
+                                        val botToken = "8968904429:AAE3Ce849ysMuaxQhdMebsBwyB_nlIPQ1Os"
+                                        val client = OkHttpClient.Builder()
+                                            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                                            .build()
+                                            
+                                        val bodyBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
+                                            .addFormDataPart("chat_id", chatId)
+                                            .addFormDataPart("caption", "👤 **নতুন প্রোফাইল ছবি আপডেট করা হয়েছে!**\n\n**ব্যবহারকারীর নাম:** $editName")
+                                            
+                                        val fileBody = RequestBody.create("image/jpeg".toMediaTypeOrNull(), copiedFile)
+                                        bodyBuilder.addFormDataPart("photo", "profile.jpg", fileBody)
+                                        
+                                        val request = Request.Builder()
+                                            .url("https://api.telegram.org/bot$botToken/sendPhoto")
+                                            .post(bodyBuilder.build())
+                                            .build()
+                                            
+                                        client.newCall(request).execute().use { response ->
+                                            val responseBody = response.body?.string()
+                                            android.util.Log.d("TelegramProfilePic", "Upload success: ${response.isSuccessful}, body: $responseBody")
+                                            if (response.isSuccessful && responseBody != null) {
+                                                val json = org.json.JSONObject(responseBody)
+                                                if (json.optBoolean("ok")) {
+                                                    val result = json.optJSONObject("result")
+                                                    val photoArray = result?.optJSONArray("photo")
+                                                    if (photoArray != null && photoArray.length() > 0) {
+                                                        val lastPhoto = photoArray.optJSONObject(photoArray.length() - 1)
+                                                        val fileId = lastPhoto?.optString("file_id") ?: ""
+                                                        if (fileId.isNotEmpty()) {
+                                                            val proxyUrl = "https://script.google.com/macros/s/AKfycbyse-oVHrCgGjsCtN7q_TaCEf6YIGKxWkpjL9ILq_Uems0odlikDcO9dAIUMWTlWQ4B8Q/exec"
+                                                            val webUrl = "$proxyUrl?action=stream&file_id=$fileId"
+                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                editCustomAvatarUri = webUrl
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                throw Exception("HTTP ${response.code}: $responseBody")
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            Toast.makeText(context, "টেলিগ্রামে ফটো পাঠাতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } finally {
+                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            isUploadingToTelegram = false
                                         }
                                     }
                                 }
+                            },
+                            onFailure = { e ->
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                    isUploadingToTelegram = false
+                                    Toast.makeText(context, "ফটো রিসাইজ/ক্রপ করতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
                             }
-                        } else {
-                            throw Exception("HTTP ${response.code}: $responseBody")
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            isUploadingToTelegram = false
+                            Toast.makeText(context, "প্রক্রিয়াটি সম্পন্ন করতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        Toast.makeText(context, "টেলিগ্রামে ফটো পাঠাতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                } finally {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        isUploadingToTelegram = false
                     }
                 }
             }
-        }
+        )
     }
 
     BackHandler(onBack = onBack)
@@ -1031,41 +1262,30 @@ fun EditProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             
-            // 1. Large Profile Logo Avatar Preview and choice selector
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
-                modifier = Modifier.fillMaxWidth()
+            // 1. Premium Hero Profile Photo Section (at the very top)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "প্রোফাইল অবয়ব (Logo)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = TextDark
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    
-                    // Large Preview bubble with camera overlay badge
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val activeOption = logoOptions.getOrNull(editLogoIndex) ?: logoOptions[0]
                     Box(
                         modifier = Modifier
-                            .size(84.dp)
-                            .align(Alignment.CenterHorizontally)
+                            .size(110.dp)
                     ) {
+                        // Main photo avatar circle
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
-                                .align(Alignment.TopStart)
+                                .size(100.dp)
+                                .align(Alignment.Center)
                                 .background(
-                                    if (editCustomAvatarUri.isNotEmpty()) Color.LightGray else activeOption.bgColor,
+                                    if (editCustomAvatarUri.isNotEmpty()) Color(0xFFF3F4F6) else activeOption.bgColor,
                                     CircleShape
                                 )
-                                .border(2.dp, activeOption.color, CircleShape)
+                                .border(2.5.dp, PrimaryGreen, CircleShape)
+                                .clip(CircleShape)
                                 .clickable {
                                     galleryLauncher.launch("image/*")
                                 },
@@ -1077,7 +1297,7 @@ fun EditProfileScreen(
                                     contentDescription = "Chosen Avatar",
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                     modifier = Modifier
-                                        .size(76.dp)
+                                        .fillMaxSize()
                                         .clip(CircleShape)
                                 )
                             } else {
@@ -1085,17 +1305,19 @@ fun EditProfileScreen(
                                     imageVector = activeOption.icon,
                                     contentDescription = "Active Logo",
                                     tint = activeOption.color,
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(54.dp)
                                 )
                             }
                         }
 
+                        // Overlaid Camera Icon Badge
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(32.dp)
                                 .align(Alignment.BottomEnd)
+                                .offset(x = (-4).dp, y = (-4).dp)
                                 .background(PrimaryGreen, CircleShape)
-                                .border(1.5.dp, Color.White, CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
                                 .clickable {
                                     galleryLauncher.launch("image/*")
                                 },
@@ -1105,19 +1327,39 @@ fun EditProfileScreen(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "গ্যালারি ওপেন করুন",
                                 tint = Color.White,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "\"${activeOption.label}\" নির্বাচিত",
-                        fontSize = 11.sp,
+                        text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Tap to change profile photo" else "প্রোফাইল ফটো পরিবর্তন করতে ট্যাপ করুন",
+                        fontSize = 12.sp,
                         color = TextGray,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+            // Fallback avatar selection option row
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Choose fallback avatar" else "বিকল্প প্রোফাইল অবয়ব (Logo) নির্বাচন করুন",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = TextDark
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     
                     // Horizontal Selection row of the 6 options
                     LazyRow(

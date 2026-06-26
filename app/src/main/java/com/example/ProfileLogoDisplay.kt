@@ -32,22 +32,38 @@ fun ProfileLogoDisplay(
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE) }
     
-    // Fallback info for the current user (from prefs)
-    val myCustomAvatarUri = sharedPrefs.getString("custom_avatar_uri", "") ?: ""
-    val mySelectedLogoIndex = sharedPrefs.getInt("selected_logo_index", 0)
     val supabase = Supabase.client
     val currentUserId = supabase.auth.currentUserOrNull()?.id ?: ""
+
+    // State for the image url and logo index
+    var customAvatarUriState by remember { mutableStateOf(sharedPrefs.getString("custom_avatar_uri", "") ?: "") }
+    var selectedLogoIndexState by remember { mutableIntStateOf(sharedPrefs.getInt("selected_logo_index", 0)) }
 
     // State for the uploader's info
     var uploaderImageUrl by remember(userId, initialImageUrl) { mutableStateOf(initialImageUrl) }
     var uploaderLogoIndex by remember(userId) { mutableStateOf(0) }
 
+    // Listen to SharedPreferences changes for current user's real-time updates
+    DisposableEffect(sharedPrefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == "custom_avatar_uri") {
+                customAvatarUriState = prefs.getString("custom_avatar_uri", "") ?: ""
+            } else if (key == "selected_logo_index") {
+                selectedLogoIndexState = prefs.getInt("selected_logo_index", 0)
+            }
+        }
+        sharedPrefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            sharedPrefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             // First set to local value if it belongs to current user
             if (userId == currentUserId) {
-                if (myCustomAvatarUri.isNotEmpty()) uploaderImageUrl = myCustomAvatarUri
-                uploaderLogoIndex = mySelectedLogoIndex
+                if (customAvatarUriState.isNotEmpty()) uploaderImageUrl = customAvatarUriState
+                uploaderLogoIndex = selectedLogoIndexState
             }
 
             // Always attempt to fetch from Firestore to stay synced and recover lost local data
@@ -72,8 +88,8 @@ fun ProfileLogoDisplay(
         }
     }
 
-    val displayImageUrl = if (userId.isNotEmpty()) uploaderImageUrl else myCustomAvatarUri
-    val displayLogoIndex = if (userId.isNotEmpty()) uploaderLogoIndex else mySelectedLogoIndex
+    val displayImageUrl = if (userId.isNotEmpty() && userId != currentUserId) uploaderImageUrl else customAvatarUriState
+    val displayLogoIndex = if (userId.isNotEmpty() && userId != currentUserId) uploaderLogoIndex else selectedLogoIndexState
 
     Box(
         modifier = modifier

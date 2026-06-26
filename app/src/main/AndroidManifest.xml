@@ -26,6 +26,9 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <attribution android:tag="CONTROL_AUDIO" android:label="@string/app_name" />
+    <attribution android:tag="CONTROL_AUDIO_PARTIAL" android:label="@string/app_name" />
+
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
