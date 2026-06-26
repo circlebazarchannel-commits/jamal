@@ -91,6 +91,15 @@ fun ProfileLogoDisplay(
     val displayImageUrl = if (userId.isNotEmpty() && userId != currentUserId) uploaderImageUrl else customAvatarUriState
     val displayLogoIndex = if (userId.isNotEmpty() && userId != currentUserId) uploaderLogoIndex else selectedLogoIndexState
 
+    val (icon, color, bgColor) = when (displayLogoIndex) {
+        1 -> Triple(Icons.Default.Star, Color(0xFF3B82F6), Color(0xFFEBF5FF))
+        2 -> Triple(Icons.Default.Favorite, Color(0xFFEC4899), Color(0xFFFDF2F8))
+        3 -> Triple(Icons.Default.MenuBook, Color(0xFFD97706), Color(0xFFFEF3C7))
+        4 -> Triple(Icons.Default.Face, Color(0xFF8B5CF6), Color(0xFFF5F3FF))
+        5 -> Triple(Icons.Default.AccountCircle, Color(0xFF14B8A6), Color(0xFFF0FDFA))
+        else -> Triple(Icons.Default.Person, PrimaryGreen, Color(0xFFE6F4EA))
+    }
+
     Box(
         modifier = modifier
             .aspectRatio(1f) // Ensure it's always square
@@ -101,22 +110,33 @@ fun ProfileLogoDisplay(
         contentAlignment = Alignment.Center
     ) {
         if (displayImageUrl.isNotEmpty()) {
-            coil.compose.AsyncImage(
-                model = displayImageUrl,
-                contentDescription = "Profile Photo",
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color(0xFFE5E7EB))
-            )
-        } else {
-            val (icon, color, bgColor) = when (displayLogoIndex) {
-                1 -> Triple(Icons.Default.Star, Color(0xFF3B82F6), Color(0xFFEBF5FF))
-                2 -> Triple(Icons.Default.Favorite, Color(0xFFEC4899), Color(0xFFFDF2F8))
-                3 -> Triple(Icons.Default.MenuBook, Color(0xFFD97706), Color(0xFFFEF3C7))
-                4 -> Triple(Icons.Default.Face, Color(0xFF8B5CF6), Color(0xFFF5F3FF))
-                5 -> Triple(Icons.Default.AccountCircle, Color(0xFF14B8A6), Color(0xFFF0FDFA))
-                else -> Triple(Icons.Default.Person, PrimaryGreen, Color(0xFFE6F4EA))
+            Box(modifier = Modifier.fillMaxSize()) {
+                coil.compose.AsyncImage(
+                    model = displayImageUrl,
+                    contentDescription = "Profile Photo",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color(0xFFE5E7EB))
+                )
+                
+                // Overlay the chosen logo as a badge at the bottom right
+                Box(
+                    modifier = Modifier
+                        .size((iconSizeDp * 0.5f).dp)
+                        .align(Alignment.BottomEnd)
+                        .background(bgColor, CircleShape)
+                        .border(1.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = "Logo Badge",
+                        tint = color,
+                        modifier = Modifier.fillMaxSize(0.65f)
+                    )
+                }
             }
+        } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

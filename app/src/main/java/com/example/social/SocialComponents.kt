@@ -85,16 +85,12 @@ fun WhatsOnYourMindSection(onNavigateToCreatePost: () -> Unit = {}) {
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Profile Logo Placeholder
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(PrimaryGreen.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(currentUserName.take(1).uppercase(), color = PrimaryGreen, fontWeight = FontWeight.Bold)
-            }
+            // Profile Logo Display
+            com.example.ProfileLogoDisplay(
+                modifier = Modifier.size(40.dp),
+                userId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "",
+                showBorder = true
+            )
             
             Spacer(modifier = Modifier.width(12.dp))
             
@@ -178,8 +174,32 @@ fun VideoFeedSection() {
 @Composable
 fun VideoPostCard(post: Post) {
     var isLiked by remember { mutableStateOf(post.isLikedByMe) }
-    var isSubscribed by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sharedPrefs = remember(post.userId) { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
+    val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
+    
+    val seedKey = "followers_count_seed_${post.userId}"
+    if (!sharedPrefs.contains(seedKey)) {
+        val randomSeed = (post.userId.hashCode().coerceAtLeast(0) % 450) + 50
+        sharedPrefs.edit().putInt(seedKey, randomSeed).apply()
+    }
+    val baseCount = sharedPrefs.getInt(seedKey, 100)
+
+    var isFollowing by remember(post.userId) {
+        mutableStateOf(sharedPrefs.getBoolean("is_following_${post.userId}", false))
+    }
+
+    val followersCount = if (isFollowing) baseCount + 1 else baseCount
+    val isEnglish = GlobalLanguage.isEnglish
+
+    val myName = remember(currentUserId) {
+        sharedPrefs.getString("user_name", "")?.takeIf { it.isNotEmpty() }
+        ?: com.example.Supabase.client.auth.currentUserOrNull()?.userMetadata?.get("full_name")?.toString()?.replace("\"", "")
+        ?: "User"
+    }
+    val displayName = if (post.userId == currentUserId) myName else post.userName
 
     Column(
         modifier = Modifier
@@ -194,29 +214,62 @@ fun VideoPostCard(post: Post) {
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(PrimaryGreen.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(post.userName.firstOrNull()?.toString()?.uppercase() ?: "U", color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
+            com.example.ProfileLogoDisplay(
+                modifier = Modifier.size(40.dp),
+                userId = post.userId,
+                initialImageUrl = post.userAvatar ?: "",
+                showBorder = true
+            )
+            
             Spacer(modifier = Modifier.width(12.dp))
+            
             Column(modifier = Modifier.weight(1f)) {
-                Text(post.userName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextDark)
-                Text("Just now", fontSize = 12.sp, color = TextGray)
-            }
-            TextButton(
-                onClick = { isSubscribed = !isSubscribed },
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                modifier = Modifier.height(32.dp),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = if (isSubscribed) TextGray else PrimaryGreen
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextDark)
+                    
+                    if (post.userId != currentUserId) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                isFollowing = !isFollowing
+                                sharedPrefs.edit().putBoolean("is_following_${post.userId}", isFollowing).apply()
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(24.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isFollowing) Color.LightGray.copy(alpha = 0.5f) else PrimaryGreen,
+                                contentColor = if (isFollowing) TextDark else Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = if (isFollowing) (if (isEnglish) "Unfollow" else "আনফলো") else (if (isEnglish) "Follow" else "ফলো"),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(PrimaryGreen.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (isEnglish) "You" else "আপনি",
+                                color = PrimaryGreen,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "$followersCount " + (if (isEnglish) "followers" else "অনুসারী") + " • Just now",
+                    fontSize = 11.sp,
+                    color = TextGray
                 )
-            ) {
-                Text(if (isSubscribed) "Subscribed" else "Subscribe", fontWeight = FontWeight.Bold)
             }
         }
         
@@ -651,6 +704,31 @@ fun SocialVideosScreen(
             ) { page ->
                 val post = posts[page]
                 val isPageActive = pagerState.currentPage == page
+                
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val sharedPrefs = remember(post.userId) { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
+                val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
+                
+                val seedKey = "followers_count_seed_${post.userId}"
+                if (!sharedPrefs.contains(seedKey)) {
+                    val randomSeed = (post.userId.hashCode().coerceAtLeast(0) % 450) + 50
+                    sharedPrefs.edit().putInt(seedKey, randomSeed).apply()
+                }
+                val baseCount = sharedPrefs.getInt(seedKey, 100)
+
+                var isFollowing by remember(post.userId) {
+                    mutableStateOf(sharedPrefs.getBoolean("is_following_${post.userId}", false))
+                }
+
+                val followersCount = if (isFollowing) baseCount + 1 else baseCount
+                
+                val myName = remember(currentUserId) {
+                    sharedPrefs.getString("user_name", "")?.takeIf { it.isNotEmpty() }
+                    ?: com.example.Supabase.client.auth.currentUserOrNull()?.userMetadata?.get("full_name")?.toString()?.replace("\"", "")
+                    ?: "User"
+                }
+                val displayName = if (post.userId == currentUserId) myName else post.userName
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     FullScreenVideoPlayer(
                         videoUrl = post.mediaUrl,
@@ -679,21 +757,14 @@ fun SocialVideosScreen(
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         // Profile
-                        Box(
+                        com.example.ProfileLogoDisplay(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryGreen.copy(alpha = 0.8f))
                                 .border(1.5.dp, Color.White, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = post.userName.firstOrNull()?.toString()?.uppercase() ?: "U",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
-                        }
+                            userId = post.userId,
+                            initialImageUrl = post.userAvatar ?: "",
+                            showBorder = true
+                        )
 
                         // Likes
                         var likedByMe by remember(post.id) { mutableStateOf(post.isLikedByMe) }
@@ -748,10 +819,10 @@ fun SocialVideosScreen(
                         }
 
                         // Share Button
-                        val context = androidx.compose.ui.platform.LocalContext.current
+                        val localContext = androidx.compose.ui.platform.LocalContext.current
                         IconButton(
                             onClick = {
-                                android.widget.Toast.makeText(context, if (isEnglish) "Link copied!" else "লিঙ্ক কপি হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(localContext, if (isEnglish) "Link copied!" else "লিঙ্ক কপি হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier
                                 .size(45.dp)
@@ -772,13 +843,74 @@ fun SocialVideosScreen(
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp, bottom = 20.dp, end = 80.dp)
                     ) {
-                        Text(
-                            text = "@${post.userName}",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            com.example.ProfileLogoDisplay(
+                                modifier = Modifier.size(36.dp),
+                                userId = post.userId,
+                                initialImageUrl = post.userAvatar ?: "",
+                                showBorder = true
+                            )
+
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "@$displayName",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 15.sp
+                                    )
+
+                                    if (post.userId != currentUserId) {
+                                        Button(
+                                            onClick = {
+                                                isFollowing = !isFollowing
+                                                sharedPrefs.edit().putBoolean("is_following_${post.userId}", isFollowing).apply()
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(24.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isFollowing) Color.White.copy(alpha = 0.3f) else PrimaryGreen,
+                                                contentColor = Color.White
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isFollowing) (if (isEnglish) "Unfollow" else "আনফলো") else (if (isEnglish) "Follow" else "ফলো"),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isEnglish) "You" else "আপনি",
+                                                color = Color.White,
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    text = "$followersCount " + (if (isEnglish) "followers" else "অনুসারী"),
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = post.title,
                             color = Color.White,
