@@ -49,6 +49,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.VolumeOff
 
@@ -632,7 +633,7 @@ fun SocialVideosScreen(
                     onClick = { handleUploadClick() },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {
-                    Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(if (isEnglish) "Upload Reel" else "ভিডিও আপলোড করুন", fontWeight = FontWeight.Bold)
                 }
@@ -826,7 +827,7 @@ fun SocialVideosScreen(
                 onClick = { handleUploadClick() },
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
-                Icon(Icons.Default.Videocam, contentDescription = "Upload Video", tint = Color.White)
+                Icon(Icons.Default.CameraAlt, contentDescription = "Upload Video", tint = Color.White)
             }
         }
 
@@ -1042,187 +1043,207 @@ fun UploadVideoScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? -> selectedVideoUri = uri }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212)) // Sleek dark upload screen
+            .background(Color.White)
     ) {
-        // App Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .background(Color(0xFF1E1E1E))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                if (isEnglish) "Upload Short Reel" else "শর্ট রিলস আপলোড",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = Color.White
-            )
-        }
-
-        Divider(color = Color.White.copy(alpha = 0.1f))
-
-        Column(modifier = Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
-            // Media Preview Area
-            if (selectedVideoUri != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black)
-                        .border(1.dp, PrimaryGreen, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(if (isEnglish) "Video Selected Successfully!" else "ভিডিও সফলভাবে নির্বাচন করা হয়েছে!", color = Color.White, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        TextButton(onClick = { videoPickerLauncher.launch("video/*") }) {
-                            Text(if (isEnglish) "Change Video" else "ভিডিও পরিবর্তন করুন", color = PrimaryGreen)
-                        }
-                    }
+            // App Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .background(Color.White)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = TextDark)
                 }
-                Spacer(modifier = Modifier.height(20.dp))
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(PrimaryGreen.copy(alpha = 0.08f))
-                        .border(1.dp, PrimaryGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable { videoPickerLauncher.launch("video/*") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Videocam, contentDescription = "Add Video", tint = PrimaryGreen, modifier = Modifier.size(44.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(if (isEnglish) "Select Video from Gallery" else "গ্যালারি থেকে ভিডিও সিলেক্ট করুন", color = Color.White, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Supports short .mp4 videos", color = Color.Gray, fontSize = 12.sp)
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // Title Field
-            Text(if (isEnglish) "Title" else "শিরোনাম", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = titleInput,
-                onValueChange = { titleInput = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(if (isEnglish) "Enter a catchy title..." else "শিরোনাম লিখুন...", color = Color.Gray) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryGreen,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    if (isEnglish) "Upload Short Reel" else "শর্ট রিলস আপলোড",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = TextDark
                 )
-            )
+            }
 
+            Divider(color = Color.LightGray.copy(alpha = 0.5f))
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Description Field
-            Text(if (isEnglish) "Description" else "বর্ণনা (ঐচ্ছিক)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = descriptionInput,
-                onValueChange = { descriptionInput = it },
-                modifier = Modifier.fillMaxWidth().height(100.dp),
-                placeholder = { Text(if (isEnglish) "Tell more about this video..." else "ভিডিও সম্পর্কে বর্ণনা লিখুন...", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryGreen,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                )
-            )
+            // Card grouping Title and Video Preview
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Media Preview inside Card
+                    if (selectedVideoUri != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.Black)
+                                .border(1.dp, PrimaryGreen, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(48.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    if (isEnglish) "Video Selected Successfully!" else "ভিডিও সফলভাবে নির্বাচন করা হয়েছে!", 
+                                    color = Color.White, 
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                TextButton(onClick = { videoPickerLauncher.launch("video/*") }) {
+                                    Text(if (isEnglish) "Change Video" else "ভিডিও পরিবর্তন করুন", color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PrimaryGreen.copy(alpha = 0.05f))
+                                .border(1.dp, PrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                .clickable { videoPickerLauncher.launch("video/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Add Video", tint = PrimaryGreen, modifier = Modifier.size(44.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    if (isEnglish) "Select Video from Gallery" else "গ্যালারি থেকে ভিডিও সিলেক্ট করুন", 
+                                    color = TextDark, 
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Supports short .mp4 videos", color = TextGray, fontSize = 12.sp)
+                            }
+                        }
+                    }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Title Field inside Card
+                    Text(if (isEnglish) "Title" else "শিরোনাম", fontWeight = FontWeight.Bold, color = TextDark, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = titleInput,
+                        onValueChange = { titleInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text(if (isEnglish) "Enter a catchy title..." else "শিরোনাম লিখুন...", color = TextGray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryGreen,
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedTextColor = TextDark,
+                            unfocusedTextColor = TextDark
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (isUploading) {
-                LinearProgressIndicator(progress = uploadProgress, modifier = Modifier.fillMaxWidth().height(8.dp), color = PrimaryGreen, trackColor = Color.Gray)
+                LinearProgressIndicator(progress = uploadProgress, modifier = Modifier.fillMaxWidth().height(8.dp), color = PrimaryGreen, trackColor = Color.LightGray)
                 Spacer(modifier = Modifier.height(12.dp))
                 if (processing) {
                     Text(if (isEnglish) "Processing... Publishing your reel." else "প্রসেসিং করা হচ্ছে... ভিডিও পাবলিশ হচ্ছে।", color = PrimaryGreen, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 } else {
-                    Text(if (isEnglish) "Uploading: ${(uploadProgress * 100).toInt()}%" else "আপলোড হচ্ছে: ${(uploadProgress * 100).toInt()}%", color = Color.White, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                    Text(if (isEnglish) "Uploading: ${(uploadProgress * 100).toInt()}%" else "আপলোড হচ্ছে: ${(uploadProgress * 100).toInt()}%", color = TextGray, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
-                Spacer(modifier = Modifier.height(32.dp))
-            } else {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                Button(
-                    onClick = { 
-                        if (titleInput.isNotBlank() && selectedVideoUri != null) {
-                             isUploading = true
-                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                 try {
-                                     processing = false
-                                     // Video Upload to R2 (mp4 format)
-                                     val finalUrl = com.example.network.R2Uploader.uploadFile(
-                                         context = context,
-                                         fileUri = selectedVideoUri!!,
-                                         ext = "mp4",
-                                         onProgress = { prog ->
-                                             uploadProgress = prog
-                                         }
-                                     )
-                                     
-                                     processing = true
-                                     
-                                     val user = com.example.Supabase.client.auth.currentUserOrNull()
-                                     val currentUserId = user?.id ?: "anonymous_user"
-                                     
-                                     val newPost = Post(
-                                         userId = currentUserId,
-                                         mediaType = "video",
-                                         mediaUrl = finalUrl,
-                                         title = titleInput,
-                                         description = descriptionInput,
-                                         userName = user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User"
-                                     )
-                                     
-                                     try {
-                                         com.example.Supabase.client.postgrest["posts"].insert<Post>(newPost)
-                                     } catch(e: Exception) {
-                                         e.printStackTrace()
-                                     }
-                                     
-                                     GlobalPostState.addPost(newPost)
-                                     
-                                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                         onNavigateBack()
-                                     }
-                                 } catch(e: Exception) {
-                                     e.printStackTrace()
-                                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                         android.widget.Toast.makeText(context, "Upload Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-                                         isUploading = false
-                                     }
-                                 }
-                             }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-                    enabled = !isUploading && titleInput.isNotBlank() && selectedVideoUri != null
-                ) {
-                    Text(if (isEnglish) "Publish Video" else "ভিডিও পাবলিশ করুন", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+
+        // Pinned Post Button at the very bottom
+        if (!isUploading) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Button(
+                onClick = { 
+                    if (titleInput.isNotBlank() && selectedVideoUri != null) {
+                         isUploading = true
+                         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                              try {
+                                  processing = false
+                                  // Video Upload to R2 (mp4 format)
+                                  val finalUrl = com.example.network.R2Uploader.uploadFile(
+                                      context = context,
+                                      fileUri = selectedVideoUri!!,
+                                      ext = "mp4",
+                                      onProgress = { prog ->
+                                          uploadProgress = prog
+                                      }
+                                  )
+                                  
+                                  processing = true
+                                  
+                                  val user = com.example.Supabase.client.auth.currentUserOrNull()
+                                  val currentUserId = user?.id ?: "anonymous_user"
+                                  
+                                  val newPost = Post(
+                                      userId = currentUserId,
+                                      mediaType = "video",
+                                      mediaUrl = finalUrl,
+                                      title = titleInput,
+                                      description = "", // No description box present
+                                      userName = user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User"
+                                  )
+                                  
+                                  try {
+                                      com.example.Supabase.client.postgrest["posts"].insert<Post>(newPost)
+                                  } catch(e: Exception) {
+                                      e.printStackTrace()
+                                  }
+                                  
+                                  GlobalPostState.addPost(newPost)
+                                  
+                                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                      onNavigateBack()
+                                  }
+                              } catch(e: Exception) {
+                                  e.printStackTrace()
+                                  kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                      android.widget.Toast.makeText(context, "Upload Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                                      isUploading = false
+                                  }
+                              }
+                         }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+                    .navigationBarsPadding()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                enabled = titleInput.isNotBlank() && selectedVideoUri != null
+            ) {
+                Text(if (isEnglish) "Publish Video" else "ভিডিও পাবলিশ করুন", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
+}
 }
 
