@@ -517,7 +517,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     } else if (selectedTab == "social_videos") {
                                         com.example.social.SocialVideosScreen(
-                                            onBack = { selectedTab = "tools" }
+                                            onBack = { selectedTab = "home" }
                                         )
                                     } else if (selectedTab == "mosque_finder") {
                                         com.example.ui.MosqueFinderScreen(onBack = { selectedTab = "tools" })
