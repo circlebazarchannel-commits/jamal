@@ -215,7 +215,13 @@ fun VideoPostCard(post: Post) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             com.example.ProfileLogoDisplay(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable {
+                        GlobalPostState.selectedCreatorId = post.userId
+                        GlobalPostState.selectedCreatorName = post.userName
+                        GlobalPostState.selectedCreatorAvatar = post.userAvatar
+                    },
                 userId = post.userId,
                 initialImageUrl = post.userAvatar ?: "",
                 showBorder = true
@@ -223,7 +229,15 @@ fun VideoPostCard(post: Post) {
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                        GlobalPostState.selectedCreatorId = post.userId
+                        GlobalPostState.selectedCreatorName = post.userName
+                        GlobalPostState.selectedCreatorAvatar = post.userAvatar
+                    }
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextDark)
                     
@@ -593,6 +607,20 @@ fun CreatePostScreen(
 fun SocialVideosScreen(
     onBack: () -> Unit
 ) {
+    val selectedCreatorId = GlobalPostState.selectedCreatorId
+    if (selectedCreatorId != null) {
+        androidx.activity.compose.BackHandler {
+            GlobalPostState.selectedCreatorId = null
+        }
+        CreatorProfilePage(
+            userId = selectedCreatorId,
+            initialAvatarUrl = GlobalPostState.selectedCreatorAvatar,
+            initialName = GlobalPostState.selectedCreatorName,
+            onBack = { GlobalPostState.selectedCreatorId = null }
+        )
+        return
+    }
+
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isUploadOpen by remember { mutableStateOf(false) }
@@ -760,7 +788,12 @@ fun SocialVideosScreen(
                         com.example.ProfileLogoDisplay(
                             modifier = Modifier
                                 .size(48.dp)
-                                .border(1.5.dp, Color.White, CircleShape),
+                                .border(1.5.dp, Color.White, CircleShape)
+                                .clickable {
+                                    GlobalPostState.selectedCreatorId = post.userId
+                                    GlobalPostState.selectedCreatorName = post.userName
+                                    GlobalPostState.selectedCreatorAvatar = post.userAvatar
+                                },
                             userId = post.userId,
                             initialImageUrl = post.userAvatar ?: "",
                             showBorder = true
@@ -848,13 +881,25 @@ fun SocialVideosScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             com.example.ProfileLogoDisplay(
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clickable {
+                                        GlobalPostState.selectedCreatorId = post.userId
+                                        GlobalPostState.selectedCreatorName = post.userName
+                                        GlobalPostState.selectedCreatorAvatar = post.userAvatar
+                                    },
                                 userId = post.userId,
                                 initialImageUrl = post.userAvatar ?: "",
                                 showBorder = true
                             )
 
-                            Column {
+                            Column(
+                                modifier = Modifier.clickable {
+                                    GlobalPostState.selectedCreatorId = post.userId
+                                    GlobalPostState.selectedCreatorName = post.userName
+                                    GlobalPostState.selectedCreatorAvatar = post.userAvatar
+                                }
+                            ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)

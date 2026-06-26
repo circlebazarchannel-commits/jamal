@@ -2,6 +2,9 @@ package com.example.social
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Serializable
 data class Post(
@@ -73,6 +76,11 @@ data class Report(
 object GlobalPostState {
     private val _posts = kotlinx.coroutines.flow.MutableStateFlow<List<Post>>(emptyList())
     val posts: kotlinx.coroutines.flow.StateFlow<List<Post>> = _posts
+
+    // Reactive navigation states for the Creator Profile Page
+    var selectedCreatorId by mutableStateOf<String?>(null)
+    var selectedCreatorName by mutableStateOf<String>("User")
+    var selectedCreatorAvatar by mutableStateOf<String?>(null)
 
     fun addPost(post: Post) {
         _posts.value = listOf(post) + _posts.value
