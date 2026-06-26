@@ -13,7 +13,7 @@ plugins {
 
 android {
   namespace = "com.example"
-  compileSdk = 34
+  compileSdk = 35
 
   // Decode the debug keystore from base64 if it does not exist
   val keystoreFile = file("${rootDir}/debug.keystore")
@@ -31,8 +31,8 @@ android {
 
   defaultConfig {
     applicationId = "com.aistudio.halalcircle.vqyptl"
-    minSdk = 23
-    targetSdk = 34
+    minSdk = 24
+    targetSdk = 35
     versionCode = 11
     versionName = "1.8"
 

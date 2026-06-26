@@ -510,12 +510,15 @@ class MainActivity : ComponentActivity() {
                                             onNavigateToHadith = { selectedTab = "hadith" },
                                             onNavigateToWidgets = { selectedTab = "widgets" },
                                             onNavigateToIslamicNames = { selectedTab = "islamic_names" },
-                                            onNavigateToSocialVideos = { selectedTab = "social_videos" }
+                                            onNavigateToSocialVideos = { selectedTab = "social_videos" },
+                                            onNavigateToMosqueFinder = { selectedTab = "mosque_finder" }
                                         )
                                     } else if (selectedTab == "social_videos") {
                                         com.example.social.SocialVideosScreen(
                                             onBack = { selectedTab = "tools" }
                                         )
+                                    } else if (selectedTab == "mosque_finder") {
+                                        com.example.ui.MosqueFinderScreen(onBack = { selectedTab = "tools" })
                                     } else if (selectedTab == "tasbih") {
                                         TasbihScreen(onBack = { selectedTab = "tools" })
                                     } else if (selectedTab == "widgets") {
@@ -1694,6 +1697,7 @@ fun CategoryGrid(
     onNavigateToWidgets: () -> Unit = {},
     onNavigateToIslamicNames: () -> Unit = {},
     onNavigateToSocialVideos: () -> Unit = {},
+    onNavigateToMosqueFinder: () -> Unit = {},
     maxItems: Int? = null
 ) {
     val items = if (GlobalLanguage.isEnglish) {
@@ -1703,6 +1707,7 @@ fun CategoryGrid(
             Triple("Tasbih", Icons.Outlined.Album, Color(0xFF8B5CF6)),
             Triple("Qibla", Icons.Outlined.Explore, PrimaryGreen),
             Triple("Dua", Icons.Outlined.WavingHand, Color(0xFFEC4899)),
+            Triple("Mosque Finder", Icons.Outlined.Place, Color(0xFF10B982)),
             Triple("Allah's Names", Icons.Outlined.Star, Color(0xFFF59E0B)),
             Triple("Zakat", Icons.Outlined.MonetizationOn, PrimaryGreen),
             Triple("Calendar", Icons.Outlined.CalendarMonth, Color(0xFF6366F1)),
@@ -1721,6 +1726,7 @@ fun CategoryGrid(
             Triple("তাসবিহ", Icons.Outlined.Album, Color(0xFF8B5CF6)),
             Triple("কিবলা", Icons.Outlined.Explore, PrimaryGreen),
             Triple("দোয়া", Icons.Outlined.WavingHand, Color(0xFFEC4899)),
+            Triple("মসজিদ খুঁজুন", Icons.Outlined.Place, Color(0xFF10B982)),
             Triple("আল্লাহর নাম", Icons.Outlined.Star, Color(0xFFF59E0B)),
             Triple("যাকাত", Icons.Outlined.MonetizationOn, PrimaryGreen),
             Triple("ক্যালেন্ডার", Icons.Outlined.CalendarMonth, Color(0xFF6366F1)),
@@ -1779,6 +1785,8 @@ fun CategoryGrid(
                                         onNavigateToIslamicNames()
                                     } else if (item.first == "সোশ্যাল ভিডিও" || item.first == "Social Videos") {
                                         onNavigateToSocialVideos()
+                                    } else if (item.first == "মসজিদ খুঁজুন" || item.first == "Mosque Finder") {
+                                        onNavigateToMosqueFinder()
                                     }
                                 }
                         ) {
@@ -1833,7 +1841,8 @@ fun ToolsScreen(
     onNavigateToHadith: () -> Unit,
     onNavigateToWidgets: () -> Unit,
     onNavigateToIslamicNames: () -> Unit,
-    onNavigateToSocialVideos: () -> Unit
+    onNavigateToSocialVideos: () -> Unit,
+    onNavigateToMosqueFinder: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -1870,7 +1879,8 @@ fun ToolsScreen(
             onNavigateToHadith = onNavigateToHadith,
             onNavigateToWidgets = onNavigateToWidgets,
             onNavigateToIslamicNames = onNavigateToIslamicNames,
-            onNavigateToSocialVideos = onNavigateToSocialVideos
+            onNavigateToSocialVideos = onNavigateToSocialVideos,
+            onNavigateToMosqueFinder = onNavigateToMosqueFinder
         )
     }
 }
