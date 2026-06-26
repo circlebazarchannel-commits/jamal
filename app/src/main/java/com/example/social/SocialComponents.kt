@@ -25,6 +25,9 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -173,7 +176,12 @@ fun VideoFeedSection() {
 }
 
 @Composable
-fun VideoPostCard(post: Post) {
+fun VideoPostCard(
+    post: Post,
+    enableEditDelete: Boolean = false,
+    onEdit: (Post) -> Unit = {},
+    onDelete: (Post) -> Unit = {}
+) {
     val coroutineScope = rememberCoroutineScope()
     
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -295,6 +303,40 @@ fun VideoPostCard(post: Post) {
                     fontSize = 11.sp,
                     color = TextGray
                 )
+            }
+
+            if (enableEditDelete && post.userId == currentUserId) {
+                var showOptionsPopup by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showOptionsPopup = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Post Options",
+                            tint = TextGray
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showOptionsPopup,
+                        onDismissRequest = { showOptionsPopup = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(if (isEnglish) "Edit" else "সম্পাদনা করুন") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = PrimaryGreen) },
+                            onClick = {
+                                showOptionsPopup = false
+                                onEdit(post)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isEnglish) "Delete" else "মুছে ফেলুন", color = Color.Red) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) },
+                            onClick = {
+                                showOptionsPopup = false
+                                onDelete(post)
+                            }
+                        )
+                    }
+                }
             }
         }
         
@@ -623,6 +665,18 @@ fun CreatePostScreen(
 fun SocialVideosScreen(
     onBack: () -> Unit
 ) {
+    var showMyProfile by remember { mutableStateOf(false) }
+
+    if (showMyProfile) {
+        androidx.activity.compose.BackHandler {
+            showMyProfile = false
+        }
+        MyProfilePage(
+            onBack = { showMyProfile = false }
+        )
+        return
+    }
+
     val selectedCreatorId = GlobalPostState.selectedCreatorId
     if (selectedCreatorId != null) {
         androidx.activity.compose.BackHandler {
@@ -999,15 +1053,40 @@ fun SocialVideosScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 2.dp), // Move further up!
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+
+                // Profile logo display on the left
+                val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, Color.White, CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable {
+                            showMyProfile = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.example.ProfileLogoDisplay(
+                        modifier = Modifier.fillMaxSize(),
+                        userId = currentUserId,
+                        showBorder = false
+                    )
+                }
             }
 
             Text(
@@ -1108,9 +1187,10 @@ fun VideoCommentsDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = Color(0xFFF3F4F6) // Light gray background
+            color = Color.White // Entirely white background
         ) {
             Scaffold(
+                containerColor = Color.White,
                 topBar = {
                     TopAppBar(
                         title = {
@@ -1151,6 +1231,7 @@ fun VideoCommentsDialog(
                                 .fillMaxWidth()
                                 .navigationBarsPadding()
                                 .imePadding()
+                                .padding(bottom = 24.dp) // Lift up from the bottom of the mobile screen
                         ) {
                             // Replying to banner
                             replyingToComment?.let { replyTarget ->
