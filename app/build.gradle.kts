@@ -37,6 +37,7 @@ android {
     versionName = "1.8"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    vectorDrawables.useSupportLibrary = true
   }
 
   signingConfigs {

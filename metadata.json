@@ -1,6 +1,8 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Halal Circle",
+  "description": "An all-in-one Halal utility app: Prayer Times, Qibla direction, Quran tracker, screen time limits, and integrated features.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
