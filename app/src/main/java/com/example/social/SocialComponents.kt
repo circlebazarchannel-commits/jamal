@@ -542,9 +542,21 @@ fun SocialVideosScreen(
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isUploadOpen by remember { mutableStateOf(false) }
+    var showLoginScreen by remember { mutableStateOf(false) }
+    var showRegisterScreen by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
     val isEnglish = GlobalLanguage.isEnglish
+
+    // Function to check login before upload
+    fun handleUploadClick() {
+        val user = com.example.Supabase.client.auth.currentUserOrNull()
+        if (user == null) {
+            showLoginScreen = true
+        } else {
+            isUploadOpen = true
+        }
+    }
 
     // Function to fetch video posts
     fun loadVideos() {
@@ -617,7 +629,7 @@ fun SocialVideosScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { isUploadOpen = true },
+                    onClick = { handleUploadClick() },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {
                     Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -811,7 +823,7 @@ fun SocialVideosScreen(
             )
 
             IconButton(
-                onClick = { isUploadOpen = true },
+                onClick = { handleUploadClick() },
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
                 Icon(Icons.Default.Videocam, contentDescription = "Upload Video", tint = Color.White)
@@ -828,6 +840,34 @@ fun SocialVideosScreen(
                 onNavigateBack = {
                     isUploadOpen = false
                     loadVideos() // Refresh
+                }
+            )
+        }
+
+        if (showLoginScreen) {
+            com.example.LoginScreen(
+                onBack = { showLoginScreen = false },
+                onNavigateToRegister = {
+                    showLoginScreen = false
+                    showRegisterScreen = true
+                },
+                onLoginSuccess = {
+                    showLoginScreen = false
+                    isUploadOpen = true
+                }
+            )
+        }
+
+        if (showRegisterScreen) {
+            com.example.RegisterScreen(
+                onBack = { showRegisterScreen = false },
+                onNavigateToLogin = {
+                    showRegisterScreen = false
+                    showLoginScreen = true
+                },
+                onRegisterSuccess = {
+                    showRegisterScreen = false
+                    isUploadOpen = true
                 }
             )
         }
