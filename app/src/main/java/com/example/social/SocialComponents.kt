@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -173,10 +174,20 @@ fun VideoFeedSection() {
 
 @Composable
 fun VideoPostCard(post: Post) {
-    var isLiked by remember { mutableStateOf(post.isLikedByMe) }
     val coroutineScope = rememberCoroutineScope()
     
     val context = androidx.compose.ui.platform.LocalContext.current
+    val isLiked = GlobalPostState.isPostLiked(context, post.id)
+    val countLikes = GlobalPostState.getLikeCount(context, post.id)
+    val commentCount = GlobalPostState.getComments(context, post.id).size
+    var showCommentSheet by remember { mutableStateOf(false) }
+
+    if (showCommentSheet) {
+        VideoCommentsDialog(
+            postId = post.id,
+            onDismiss = { showCommentSheet = false }
+        )
+    }
     val sharedPrefs = remember(post.userId) { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
     val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
     
@@ -371,29 +382,34 @@ fun VideoPostCard(post: Post) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { 
-                isLiked = !isLiked 
-                // In full implementation, save to 'likes' table
-            }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { 
+                    GlobalPostState.likePost(context, post.id, !isLiked)
+                }
+            ) {
                 Icon(
-                    if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
+                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, 
                     contentDescription = "Like", 
                     tint = if (isLiked) Color.Red else TextDark,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isLiked) "1" else "0", fontWeight = FontWeight.Bold, color = TextDark)
+                Text(countLikes.toString(), fontWeight = FontWeight.Bold, color = TextDark)
             }
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { showCommentSheet = true }
+            ) {
                 Icon(
-                    Icons.Default.ChatBubbleOutline, 
+                    imageVector = Icons.Default.ChatBubbleOutline, 
                     contentDescription = "Comment", 
                     tint = TextDark,
                     modifier = Modifier.size(26.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("0", fontWeight = FontWeight.Bold, color = TextDark)
+                Text(commentCount.toString(), fontWeight = FontWeight.Bold, color = TextDark)
             }
             
             Icon(
@@ -800,14 +816,14 @@ fun SocialVideosScreen(
                         )
 
                         // Likes
-                        var likedByMe by remember(post.id) { mutableStateOf(post.isLikedByMe) }
-                        var countLikes by remember(post.id) { mutableStateOf(12 + (post.id.hashCode() % 45).coerceAtLeast(0)) }
+                        val localContextForLikes = androidx.compose.ui.platform.LocalContext.current
+                        val likedByMe = GlobalPostState.isPostLiked(localContextForLikes, post.id)
+                        val countLikes = GlobalPostState.getLikeCount(localContextForLikes, post.id)
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
                                 onClick = {
-                                    likedByMe = !likedByMe
-                                    if (likedByMe) countLikes++ else countLikes--
+                                    GlobalPostState.likePost(localContextForLikes, post.id, !likedByMe)
                                 },
                                 modifier = Modifier
                                     .size(45.dp)
@@ -826,6 +842,7 @@ fun SocialVideosScreen(
 
                         // Comments Button
                         var showCommentSheet by remember { mutableStateOf(false) }
+                        val commentCount = GlobalPostState.getComments(localContextForLikes, post.id).size
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
                                 onClick = { showCommentSheet = true },
@@ -841,7 +858,7 @@ fun SocialVideosScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("5", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(commentCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
                         if (showCommentSheet) {
@@ -1052,88 +1069,462 @@ fun SocialVideosScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoCommentsDialog(
     postId: String,
     onDismiss: () -> Unit
 ) {
     val isEnglish = GlobalLanguage.isEnglish
-    var commentText by remember { mutableStateOf("") }
-    val fakeComments = remember {
-        mutableStateListOf(
-            "মাশাআল্লাহ ভাই, দারুণ হয়েছে!",
-            "সুবহানআল্লাহ! অনেক সুন্দর ভিডিও।",
-            "জাজাকাল্লাহ খাইরান শেয়ার করার জন্য।",
-            "খুব চমৎকার উপস্থাপন!",
-            "আল্লাহ আমাদের আমল করার তৌফিক দিন।"
-        )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
+    val sharedPrefs = remember(currentUserId) { context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE) }
+    
+    val myName = remember(currentUserId) {
+        sharedPrefs.getString("user_name", "")?.takeIf { it.isNotEmpty() }
+            ?: com.example.Supabase.client.auth.currentUserOrNull()?.userMetadata?.get("full_name")?.toString()?.replace("\"", "")
+            ?: "User"
+    }
+    val myAvatar = remember(currentUserId) {
+        sharedPrefs.getString("profile_image_url", "")?.takeIf { it.isNotEmpty() }
     }
 
-    AlertDialog(
+    // Get reactive comments list
+    val allComments = GlobalPostState.getComments(context, postId)
+    
+    // Separate root comments and replies
+    val rootComments = allComments.filter { it.parentCommentId == null }
+    
+    var commentText by remember { mutableStateOf("") }
+    var replyingToComment by remember { mutableStateOf<Comment?>(null) }
+
+    androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEnglish) "Comments" else "মন্তব্যসমূহ", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(fakeComments) { comment ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryGreen.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("U", color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color(0xFFF3F4F6) // Light gray background
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
                             Column {
-                                Text(if (isEnglish) "User" else "ব্যবহারকারী", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextDark)
-                                Text(comment, fontSize = 13.sp, color = TextDark)
+                                Text(
+                                    text = if (isEnglish) "Comments" else "মন্তব্যসমূহ",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = TextDark
+                                )
+                                Text(
+                                    text = if (isEnglish) "${allComments.size} comments" else "${allComments.size} টি মন্তব্য",
+                                    fontSize = 12.sp,
+                                    color = TextGray
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = TextDark
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    )
+                },
+                bottomBar = {
+                    Surface(
+                        tonalElevation = 4.dp,
+                        shadowElevation = 8.dp,
+                        color = Color.White
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .imePadding()
+                        ) {
+                            // Replying to banner
+                            replyingToComment?.let { replyTarget ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(PrimaryGreen.copy(alpha = 0.08f))
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = if (isEnglish) "Replying to @${replyTarget.userName}" else "@${replyTarget.userName}-এর উত্তরের জন্য",
+                                        fontSize = 12.sp,
+                                        color = PrimaryGreen,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    IconButton(
+                                        onClick = { replyingToComment = null },
+                                        modifier = Modifier.size(18.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Cancel reply",
+                                            tint = PrimaryGreen,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Input Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                com.example.ProfileLogoDisplay(
+                                    modifier = Modifier.size(36.dp),
+                                    userId = currentUserId,
+                                    initialImageUrl = myAvatar ?: "",
+                                    showBorder = true
+                                )
+                                
+                                Spacer(modifier = Modifier.width(10.dp))
+                                
+                                OutlinedTextField(
+                                    value = commentText,
+                                    onValueChange = { commentText = it },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = {
+                                        Text(
+                                            text = if (replyingToComment != null) {
+                                                if (isEnglish) "Write a reply..." else "একটি উত্তর লিখুন..."
+                                            } else {
+                                                if (isEnglish) "Add a comment..." else "একটি মন্তব্য যোগ করুন..."
+                                            },
+                                            fontSize = 14.sp,
+                                            color = Color.Gray
+                                        )
+                                    },
+                                    maxLines = 4,
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = Color(0xFFF9FAFB),
+                                        unfocusedContainerColor = Color(0xFFF9FAFB),
+                                        focusedBorderColor = PrimaryGreen,
+                                        unfocusedBorderColor = Color.LightGray.copy(alpha = 0.7f)
+                                    )
+                                )
+                                
+                                Spacer(modifier = Modifier.width(8.dp))
+                                
+                                IconButton(
+                                    onClick = {
+                                        if (commentText.isNotBlank()) {
+                                            val newComment = Comment(
+                                                postId = postId,
+                                                userId = currentUserId,
+                                                commentText = commentText.trim(),
+                                                parentCommentId = replyingToComment?.id,
+                                                userName = myName,
+                                                userAvatar = myAvatar,
+                                                createdAt = if (isEnglish) "Just now" else "এইমাত্র"
+                                            )
+                                            GlobalPostState.addComment(context, postId, newComment)
+                                            commentText = ""
+                                            replyingToComment = null
+                                        }
+                                    },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = PrimaryGreen,
+                                        contentColor = Color.White
+                                    ),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Send,
+                                        contentDescription = "Send",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = commentText,
-                        onValueChange = { commentText = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(if (isEnglish) "Write a comment..." else "মন্তব্য লিখুন...", color = Color.Gray) },
-                        maxLines = 2,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryGreen,
-                            unfocusedBorderColor = Color.LightGray
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
-                            if (commentText.isNotBlank()) {
-                                fakeComments.add(commentText)
-                                commentText = ""
-                            }
-                        },
-                        colors = IconButtonDefaults.iconButtonColors(contentColor = PrimaryGreen)
+            ) { paddingValues ->
+                if (rootComments.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send")
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChatBubbleOutline,
+                                contentDescription = "No comments",
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(72.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isEnglish) "No Comments Yet" else "এখনো কোনো মন্তব্য নেই",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = TextDark
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (isEnglish) "Be the first to share your thoughts!" else "সবার আগে আপনার সুন্দর মন্তব্যটি এখানে পেশ করুন!",
+                                fontSize = 13.sp,
+                                color = TextGray,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+                    ) {
+                        items(rootComments) { comment ->
+                            val replies = allComments.filter { it.parentCommentId == comment.id }
+                            val isLiked = GlobalPostState.isCommentLiked(context, comment.id)
+                            val likeCount = GlobalPostState.getCommentLikeCount(context, comment.id)
+                            
+                            CommentCard(
+                                comment = comment,
+                                replies = replies,
+                                isEnglish = isEnglish,
+                                onLikeClick = {
+                                    GlobalPostState.likeComment(context, comment.id, !isLiked)
+                                },
+                                onReplyClick = {
+                                    replyingToComment = comment
+                                },
+                                isCommentLiked = isLiked,
+                                commentLikeCount = likeCount,
+                                isChildCommentLiked = { child ->
+                                    GlobalPostState.isCommentLiked(context, child.id)
+                                },
+                                getChildCommentLikeCount = { child ->
+                                    GlobalPostState.getCommentLikeCount(context, child.id)
+                                },
+                                onChildLikeClick = { child ->
+                                    val childLiked = GlobalPostState.isCommentLiked(context, child.id)
+                                    GlobalPostState.likeComment(context, child.id, !childLiked)
+                                }
+                            )
+                        }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(if (isEnglish) "Close" else "বন্ধ করুন", color = PrimaryGreen)
+        }
+    }
+}
+
+@Composable
+fun CommentCard(
+    comment: Comment,
+    replies: List<Comment>,
+    isEnglish: Boolean,
+    onLikeClick: () -> Unit,
+    onReplyClick: () -> Unit,
+    onChildLikeClick: (Comment) -> Unit,
+    isCommentLiked: Boolean,
+    commentLikeCount: Int,
+    isChildCommentLiked: (Comment) -> Boolean,
+    getChildCommentLikeCount: (Comment) -> Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Header Row
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                com.example.ProfileLogoDisplay(
+                    modifier = Modifier.size(36.dp),
+                    userId = comment.userId,
+                    initialImageUrl = comment.userAvatar ?: "",
+                    showBorder = true
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = comment.userName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = TextDark
+                    )
+                    Text(
+                        text = comment.createdAt ?: (if (isEnglish) "Just now" else "এইমাত্র"),
+                        fontSize = 11.sp,
+                        color = TextGray
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Text Content
+            Text(
+                text = comment.commentText,
+                fontSize = 14.sp,
+                color = TextDark,
+                modifier = Modifier.padding(horizontal = 2.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            // Action Buttons
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Like Button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onLikeClick() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isCommentLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Like",
+                        tint = if (isCommentLiked) Color.Red else TextGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (commentLikeCount > 0) commentLikeCount.toString() else (if (isEnglish) "Like" else "লাইক"),
+                        fontSize = 12.sp,
+                        color = if (isCommentLiked) Color.Red else TextGray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
+                // Reply Button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onReplyClick() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Reply,
+                        contentDescription = "Reply",
+                        tint = TextGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isEnglish) "Reply" else "উত্তর",
+                        fontSize = 12.sp,
+                        color = TextGray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            // Nested Replies
+            if (replies.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFF3F4F6), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(start = 12.dp) // Indentation for thread look
+                ) {
+                    replies.forEach { reply ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF9FAFB), RoundedCornerShape(12.dp))
+                                .padding(10.dp)
+                        ) {
+                            com.example.ProfileLogoDisplay(
+                                modifier = Modifier.size(28.dp),
+                                userId = reply.userId,
+                                initialImageUrl = reply.userAvatar ?: "",
+                                showBorder = true
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = reply.userName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = TextDark
+                                        )
+                                        Text(
+                                            text = reply.createdAt ?: (if (isEnglish) "Just now" else "এইমাত্র"),
+                                            fontSize = 10.sp,
+                                            color = TextGray
+                                        )
+                                    }
+                                    
+                                    // Reply Like Button
+                                    val isReplyLiked = isChildCommentLiked(reply)
+                                    val replyLikeCount = getChildCommentLikeCount(reply)
+                                    IconButton(
+                                        onClick = { onChildLikeClick(reply) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isReplyLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            contentDescription = "Like Reply",
+                                            tint = if (isReplyLiked) Color.Red else TextGray,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = reply.commentText,
+                                    fontSize = 13.sp,
+                                    color = TextDark
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
