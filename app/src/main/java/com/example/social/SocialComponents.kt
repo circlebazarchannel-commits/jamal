@@ -672,8 +672,8 @@ fun SocialVideosScreen(
                     // Right-side actions (Likes, Comments, Share)
                     Column(
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 16.dp, bottom = 64.dp),
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
@@ -769,7 +769,7 @@ fun SocialVideosScreen(
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 16.dp, bottom = 48.dp, end = 80.dp)
+                            .padding(start = 16.dp, bottom = 20.dp, end = 80.dp)
                     ) {
                         Text(
                             text = "@${post.userName}",

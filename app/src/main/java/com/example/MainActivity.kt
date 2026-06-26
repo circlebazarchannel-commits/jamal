@@ -803,6 +803,34 @@ fun AppBottomNavigation(selectedTab: String, isDark: Boolean, onTabSelected: (St
                 unselectedTextColor = navUnselectedColor
             )
         )
+        NavigationBarItem(
+            selected = selectedTab == "social_videos",
+            onClick = { onTabSelected("social_videos") },
+            icon = { 
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (selectedTab == "social_videos") Modifier.border(2.dp, PrimaryGreen, CircleShape) else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (selectedTab == "social_videos") Icons.Default.VideoLibrary else Icons.Outlined.VideoLibrary, 
+                        contentDescription = "Social",
+                        modifier = Modifier.size(24.dp)
+                    ) 
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PrimaryGreen,
+                selectedTextColor = PrimaryGreen,
+                indicatorColor = Color.Transparent,
+                unselectedIconColor = navUnselectedColor,
+                unselectedTextColor = navUnselectedColor
+            )
+        )
     }
 }
 }
@@ -1700,8 +1728,7 @@ fun CategoryGrid(
             Triple("Islamic Name", Icons.Outlined.People, Color(0xFF3B82F6)),
             Triple("Salah Learning", Icons.Outlined.SelfImprovement, Color(0xFF14B8A6)),
             Triple("Durood Reminder", Icons.Outlined.Notifications, Color(0xFF8B5CF6)),
-            Triple("Widgets", Icons.Outlined.Widgets, Color(0xFF10B982)),
-            Triple("Social Videos", Icons.Outlined.VideoLibrary, Color(0xFFEF4444))
+            Triple("Widgets", Icons.Outlined.Widgets, Color(0xFF10B982))
         )
     } else {
         listOf(
@@ -1719,8 +1746,7 @@ fun CategoryGrid(
             Triple("ইসলামিক নাম", Icons.Outlined.People, Color(0xFF3B82F6)),
             Triple("নামাজ শিক্ষা", Icons.Outlined.SelfImprovement, Color(0xFF14B8A6)),
             Triple("দরুদ রিমাইন্ডার", Icons.Outlined.Notifications, Color(0xFF8B5CF6)),
-            Triple("উইজেট", Icons.Outlined.Widgets, Color(0xFF10B982)),
-            Triple("সোশ্যাল ভিডিও", Icons.Outlined.VideoLibrary, Color(0xFFEF4444))
+            Triple("উইজেট", Icons.Outlined.Widgets, Color(0xFF10B982))
         )
     }
 
