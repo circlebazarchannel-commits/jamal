@@ -49,7 +49,9 @@ fun Int.toBengaliDigits(): String {
 }
 
 @Composable
-fun TrackerScreen() {
+fun TrackerScreen(
+    onNavigateToProfile: () -> Unit = {}
+) {
     val trackerViewModel: TrackerViewModel = viewModel()
     val state by trackerViewModel.uiState.collectAsState()
 
@@ -71,20 +73,35 @@ fun TrackerScreen() {
                 )
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
-            Column {
-                Text(
-                    text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Amal Tracker" else "আমল ট্র্যাকার",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-                Text(
-                    text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Track your daily prayers, Quran reading and Dhikr to build habits." else "আপনার প্রতিদিনের সালাত, কুরআন ও জিকির ট্র্যাক করে অভ্যাস গড়ে তুলুন।",
-                    fontSize = 13.sp,
-                    color = TextGray,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Amal Tracker" else "আমল ট্র্যাকার",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                    )
+                    Text(
+                        text = if (com.example.viewmodel.GlobalLanguage.isEnglish) "Track your daily prayers, Quran reading and Dhikr to build habits." else "আপনার প্রতিদিনের সালাত, কুরআন ও জিকির ট্র্যাক করে অভ্যাস গড়ে তুলুন।",
+                        fontSize = 13.sp,
+                        color = TextGray,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                
+                IconButton(onClick = onNavigateToProfile) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person, 
+                        contentDescription = "Profile", 
+                        tint = TextDark,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 

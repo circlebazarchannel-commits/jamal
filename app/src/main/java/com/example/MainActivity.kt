@@ -480,7 +480,8 @@ class MainActivity : ComponentActivity() {
                                             onNavigateToHadith = { selectedTab = "hadith" },
                                             onOpenNotificationsPage = { isNotificationsPageOpen = true },
                                             onNavigateToCreatePost = { isCreatePostOpen = true },
-                                            onOpenFoundationPage = { isFoundationPageOpen = true }
+                                            onOpenFoundationPage = { isFoundationPageOpen = true },
+                                            onNavigateToProfile = { selectedTab = "profile" }
                                         )
                                     } else if (selectedTab == "location") {
                                         LocationSelectionScreen(
@@ -494,7 +495,7 @@ class MainActivity : ComponentActivity() {
                                     } else if (selectedTab == "hadith") {
                                         HadithScreen(onBack = { selectedTab = "tools" })
                                     } else if (selectedTab == "tracker") {
-                                        TrackerScreen()
+                                        TrackerScreen(onNavigateToProfile = { selectedTab = "profile" })
                                     } else if (selectedTab == "tools") {
                                         ToolsScreen(
                                             onNavigateToTracker = { selectedTab = "tracker" },
@@ -511,7 +512,8 @@ class MainActivity : ComponentActivity() {
                                             onNavigateToWidgets = { selectedTab = "widgets" },
                                             onNavigateToIslamicNames = { selectedTab = "islamic_names" },
                                             onNavigateToSocialVideos = { selectedTab = "social_videos" },
-                                            onNavigateToMosqueFinder = { selectedTab = "mosque_finder" }
+                                            onNavigateToMosqueFinder = { selectedTab = "mosque_finder" },
+                                            onNavigateToProfile = { selectedTab = "profile" }
                                         )
                                     } else if (selectedTab == "social_videos") {
                                         com.example.social.SocialVideosScreen(
@@ -801,34 +803,6 @@ fun AppBottomNavigation(selectedTab: String, isDark: Boolean, onTabSelected: (St
                 unselectedTextColor = navUnselectedColor
             )
         )
-        NavigationBarItem(
-            selected = selectedTab == "profile",
-            onClick = { onTabSelected("profile") },
-            icon = { 
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .then(
-                            if (selectedTab == "profile") Modifier.border(2.dp, PrimaryGreen, CircleShape) else Modifier
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (selectedTab == "profile") Icons.Filled.Person else Icons.Outlined.Person, 
-                        contentDescription = "Profile",
-                        modifier = Modifier.size(24.dp)
-                    ) 
-                }
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                indicatorColor = Color.Transparent,
-                unselectedIconColor = navUnselectedColor,
-                unselectedTextColor = navUnselectedColor
-            )
-        )
     }
 }
 }
@@ -853,7 +827,8 @@ fun HomeScreen(
     onNavigateToHadith: () -> Unit,
     onOpenNotificationsPage: () -> Unit,
     onNavigateToCreatePost: () -> Unit = {},
-    onOpenFoundationPage: () -> Unit
+    onOpenFoundationPage: () -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     var isPrayerExpanded by remember { mutableStateOf(false) }
     
@@ -945,6 +920,15 @@ fun HomeScreen(
                             )
                         }
                     }
+                }
+                
+                IconButton(onClick = onNavigateToProfile) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person, 
+                        contentDescription = "Profile", 
+                        tint = TextDark,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -1842,7 +1826,8 @@ fun ToolsScreen(
     onNavigateToWidgets: () -> Unit,
     onNavigateToIslamicNames: () -> Unit,
     onNavigateToSocialVideos: () -> Unit,
-    onNavigateToMosqueFinder: () -> Unit
+    onNavigateToMosqueFinder: () -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -1852,6 +1837,7 @@ fun ToolsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -1860,6 +1846,15 @@ fun ToolsScreen(
                 color = TextDark, 
                 fontSize = 20.sp
             )
+            
+            IconButton(onClick = onNavigateToProfile) {
+                Icon(
+                    imageVector = Icons.Outlined.Person, 
+                    contentDescription = "Profile", 
+                    tint = TextDark,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
