@@ -199,4 +199,21 @@ object GlobalPostState {
             .putInt("comment_like_count_$commentId", newCount)
             .apply()
     }
+
+    fun updateComment(context: android.content.Context, postId: String, commentId: String, newText: String) {
+        val list = getComments(context, postId)
+        val index = list.indexOfFirst { it.id == commentId }
+        if (index != -1) {
+            val updated = list[index].copy(commentText = newText)
+            list[index] = updated
+            saveComments(context, postId, list)
+        }
+    }
+
+    fun deleteComment(context: android.content.Context, postId: String, commentId: String) {
+        val list = getComments(context, postId)
+        // Also delete replies
+        list.removeIf { it.id == commentId || it.parentCommentId == commentId }
+        saveComments(context, postId, list)
+    }
 }

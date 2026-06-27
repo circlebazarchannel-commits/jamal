@@ -1193,6 +1193,8 @@ fun VideoCommentsDialog(
     
     var commentText by remember { mutableStateOf("") }
     var replyingToComment by remember { mutableStateOf<Comment?>(null) }
+    var editingComment by remember { mutableStateOf<Comment?>(null) }
+    var editCommentText by remember { mutableStateOf("") }
 
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
@@ -1407,11 +1409,26 @@ fun VideoCommentsDialog(
                                 comment = comment,
                                 replies = replies,
                                 isEnglish = isEnglish,
+                                currentUserId = currentUserId,
                                 onLikeClick = {
                                     GlobalPostState.likeComment(context, comment.id, !isLiked)
                                 },
                                 onReplyClick = {
                                     replyingToComment = comment
+                                },
+                                onEdit = {
+                                    editingComment = comment
+                                    editCommentText = comment.commentText
+                                },
+                                onDelete = {
+                                    GlobalPostState.deleteComment(context, postId, comment.id)
+                                },
+                                onChildEdit = { child ->
+                                    editingComment = child
+                                    editCommentText = child.commentText
+                                },
+                                onChildDelete = { child ->
+                                    GlobalPostState.deleteComment(context, postId, child.id)
                                 },
                                 isCommentLiked = isLiked,
                                 commentLikeCount = likeCount,
@@ -1432,6 +1449,40 @@ fun VideoCommentsDialog(
             }
         }
     }
+
+    // Edit Comment Dialog
+    if (editingComment != null) {
+        AlertDialog(
+            onDismissRequest = { editingComment = null },
+            title = { Text(if (isEnglish) "Edit Comment" else "মন্তব্য সম্পাদনা") },
+            text = {
+                OutlinedTextField(
+                    value = editCommentText,
+                    onValueChange = { editCommentText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(if (isEnglish) "Write something..." else "কিছু লিখুন...") }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        editingComment?.let {
+                            GlobalPostState.updateComment(context, postId, it.id, editCommentText)
+                        }
+                        editingComment = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) {
+                    Text(if (isEnglish) "Update" else "আপডেট")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingComment = null }) {
+                    Text(if (isEnglish) "Cancel" else "বাতিল")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -1439,8 +1490,13 @@ fun CommentCard(
     comment: Comment,
     replies: List<Comment>,
     isEnglish: Boolean,
+    currentUserId: String,
     onLikeClick: () -> Unit,
     onReplyClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onChildEdit: (Comment) -> Unit,
+    onChildDelete: (Comment) -> Unit,
     onChildLikeClick: (Comment) -> Unit,
     isCommentLiked: Boolean,
     commentLikeCount: Int,
@@ -1450,7 +1506,8 @@ fun CommentCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -1462,27 +1519,61 @@ fun CommentCard(
         ) {
             // Header Row
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                com.example.ProfileLogoDisplay(
-                    modifier = Modifier.size(36.dp),
-                    userId = comment.userId,
-                    initialImageUrl = comment.userAvatar ?: "",
-                    showBorder = true
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(
-                        text = comment.userName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = TextDark
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.example.ProfileLogoDisplay(
+                        modifier = Modifier.size(36.dp),
+                        userId = comment.userId,
+                        initialImageUrl = comment.userAvatar ?: "",
+                        showBorder = true
                     )
-                    Text(
-                        text = comment.createdAt ?: (if (isEnglish) "Just now" else "এইমাত্র"),
-                        fontSize = 11.sp,
-                        color = TextGray
-                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = comment.userName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = TextDark
+                        )
+                        Text(
+                            text = comment.createdAt ?: (if (isEnglish) "Just now" else "এইমাত্র"),
+                            fontSize = 11.sp,
+                            color = TextGray
+                        )
+                    }
+                }
+
+                if (comment.userId == currentUserId) {
+                    var showMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = TextGray)
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEnglish) "Edit Comment" else "মন্তব্য সম্পাদনা") },
+                                onClick = {
+                                    showMenu = false
+                                    onEdit()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (isEnglish) "Delete Comment" else "মন্তব্য মুছে ফেলুন") },
+                                onClick = {
+                                    showMenu = false
+                                    onDelete()
+                                },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) }
+                            )
+                        }
+                    }
                 }
             }
             
@@ -1594,19 +1685,60 @@ fun CommentCard(
                                         )
                                     }
                                     
-                                    // Reply Like Button
-                                    val isReplyLiked = isChildCommentLiked(reply)
-                                    val replyLikeCount = getChildCommentLikeCount(reply)
-                                    IconButton(
-                                        onClick = { onChildLikeClick(reply) },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isReplyLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                            contentDescription = "Like Reply",
-                                            tint = if (isReplyLiked) Color.Red else TextGray,
-                                            modifier = Modifier.size(14.dp)
-                                        )
+                                    // Reply Actions
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // Reply Like Button
+                                        val isReplyLiked = isChildCommentLiked(reply)
+                                        val replyLikeCount = getChildCommentLikeCount(reply)
+                                        IconButton(
+                                            onClick = { onChildLikeClick(reply) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isReplyLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                                contentDescription = "Like Reply",
+                                                tint = if (isReplyLiked) Color.Red else TextGray,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+
+                                        if (reply.userId == currentUserId) {
+                                            var showReplyMenu by remember { mutableStateOf(false) }
+                                            Box {
+                                                IconButton(
+                                                    onClick = { showReplyMenu = true },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.MoreVert,
+                                                        contentDescription = "Menu",
+                                                        tint = TextGray,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = showReplyMenu,
+                                                    onDismissRequest = { showReplyMenu = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(if (isEnglish) "Edit Comment" else "মন্তব্য সম্পাদনা") },
+                                                        onClick = {
+                                                            showReplyMenu = false
+                                                            onChildEdit(reply)
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text(if (isEnglish) "Delete Comment" else "মন্তব্য মুছে ফেলুন") },
+                                                        onClick = {
+                                                            showReplyMenu = false
+                                                            onChildDelete(reply)
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red, modifier = Modifier.size(18.dp)) }
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 
