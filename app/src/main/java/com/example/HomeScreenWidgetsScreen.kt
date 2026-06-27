@@ -31,7 +31,7 @@ import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextGray
 import com.example.ui.theme.BgLight
 import com.example.viewmodel.GlobalLanguage
-import com.example.widget.WidgetUtils
+import android.widget.Toast
 
 @Composable
 fun HomeScreenWidgetsScreen(
@@ -208,7 +208,7 @@ fun HomeScreenWidgetsScreen(
 
                 Button(
                     onClick = {
-                        WidgetUtils.pinWidget(context, "com.example.widget.PrayerTimesWidgetProvider")
+                        Toast.makeText(context, "Widgets disabled", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
@@ -303,7 +303,7 @@ fun HomeScreenWidgetsScreen(
 
                 Button(
                     onClick = {
-                        WidgetUtils.pinWidget(context, "com.example.widget.NextPrayerWidgetProvider")
+                        Toast.makeText(context, "Widgets disabled", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
@@ -391,7 +391,7 @@ fun HomeScreenWidgetsScreen(
 
                 Button(
                     onClick = {
-                        WidgetUtils.pinWidget(context, "com.example.widget.SunriseWidgetProvider")
+                        Toast.makeText(context, "Widgets disabled", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
@@ -479,7 +479,7 @@ fun HomeScreenWidgetsScreen(
 
                 Button(
                     onClick = {
-                        WidgetUtils.pinWidget(context, "com.example.widget.SunsetWidgetProvider")
+                        Toast.makeText(context, "Widgets disabled", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
@@ -561,7 +561,7 @@ fun HomeScreenWidgetsScreen(
 
                 Button(
                     onClick = {
-                        WidgetUtils.pinWidget(context, "com.example.widget.DateWidgetProvider")
+                        Toast.makeText(context, "Widgets disabled", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),

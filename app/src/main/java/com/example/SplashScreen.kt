@@ -101,7 +101,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.app_logo_custom),
+                    painter = painterResource(id = R.mipmap.ic_launcher),
                     contentDescription = "Halal Circle Logo",
                     modifier = Modifier.fillMaxSize()
                 )

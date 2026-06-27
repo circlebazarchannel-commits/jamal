@@ -14,6 +14,12 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.height
 import com.example.receiver.AlarmReceiver
 import com.example.receiver.AlarmService
 import java.util.Calendar
@@ -41,10 +47,43 @@ class AlarmActivity : ComponentActivity() {
             )
         }
 
-        setContentView(R.layout.activity_alarm)
-
-        val label = intent.getStringExtra("ALARM_LABEL") ?: "HalalCircle Alarm"
-        findViewById<TextView>(R.id.appName).text = label
+        setContent {
+            com.example.ui.theme.MyApplicationTheme {
+                androidx.compose.material3.Surface(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        androidx.compose.foundation.layout.Column(
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                        ) {
+                            val label = intent.getStringExtra("ALARM_LABEL") ?: "HalalCircle Alarm"
+                            androidx.compose.material3.Text(label, color = androidx.compose.ui.graphics.Color.White, fontSize = 24.sp)
+                            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(32.dp))
+                            androidx.compose.material3.Button(onClick = { 
+                                val fromService = intent.getBooleanExtra("FROM_SERVICE", false)
+                                val alarmId = intent.getIntExtra("ALARM_ID", -1)
+                                if (fromService) {
+                                    val stopServiceIntent = Intent(this@AlarmActivity, com.example.receiver.AlarmService::class.java)
+                                    stopServiceIntent.action = "STOP_ALARM"
+                                    stopService(stopServiceIntent)
+                                    
+                                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                                    notificationManager.cancel(alarmId + 3000)
+                                    notificationManager.cancel(alarmId + 4000)
+                                } else {
+                                    stopAlarmSound()
+                                }
+                                Toast.makeText(this@AlarmActivity, "অ্যালার্ম বন্ধ করা হলো।", Toast.LENGTH_SHORT).show()
+                                finish()
+                             }) {
+                                androidx.compose.material3.Text("Stop Alarm")
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         val fromService = intent.getBooleanExtra("FROM_SERVICE", false)
         val alarmId = intent.getIntExtra("ALARM_ID", -1)
@@ -60,43 +99,6 @@ class AlarmActivity : ComponentActivity() {
             }
             ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
             ringtone?.play()
-        }
-
-        val btnSnooze = findViewById<Button>(R.id.btnSnooze)
-        val btnDismiss = findViewById<Button>(R.id.btnDismiss)
-
-        // সবুজ বাটন (Snooze): ১০ মিনিট পর আবার বাজবে
-        btnSnooze.setOnClickListener {
-            if (fromService) {
-                val snoozeIntent = Intent(this, AlarmService::class.java)
-                snoozeIntent.action = "SNOOZE_ALARM"
-                snoozeIntent.putExtra("ALARM_ID", alarmId)
-                snoozeIntent.putExtra("ALARM_LABEL", label)
-                snoozeIntent.putExtra("RINGTONE_URI", ringtoneUriStr)
-                startService(snoozeIntent)
-            } else {
-                stopAlarmSound()
-                scheduleAlarm(10 * 60 * 1000) // ১০ মিনিট মিলিসেকেন্ডে কনভার্ট করে
-            }
-            Toast.makeText(this, "অ্যালার্ম ১০ মিনিটের জন্য স্নুজ করা হলো", Toast.LENGTH_SHORT).show()
-            finish()
-        }
-
-        // লাল বাটন (Dismiss): আজকের মতো বন্ধ, পরের দিন একই সময়ে বাজবে
-        btnDismiss.setOnClickListener {
-            if (fromService) {
-                val stopServiceIntent = Intent(this, AlarmService::class.java)
-                stopServiceIntent.action = "STOP_ALARM"
-                stopService(stopServiceIntent)
-                
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                notificationManager.cancel(alarmId + 3000)
-                notificationManager.cancel(alarmId + 4000)
-            } else {
-                stopAlarmSound()
-            }
-            Toast.makeText(this, "অ্যালার্ম বন্ধ করা হলো।", Toast.LENGTH_SHORT).show()
-            finish()
         }
     }
 

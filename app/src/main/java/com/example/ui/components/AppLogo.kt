@@ -34,7 +34,7 @@ fun DynamicAppLogo(
         )
     } else {
         Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo_custom),
+            painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
             contentDescription = "App Logo",
             modifier = modifier
                 .size(size)

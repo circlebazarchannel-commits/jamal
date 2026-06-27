@@ -64,7 +64,7 @@ fun WebsiteBlockerScreen(
 
     // Helper to check accessibility service
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val expectedComponentName = android.content.ComponentName(context, SocialAccessibilityService::class.java)
+        val expectedComponentName = android.content.ComponentName(context.packageName, "com.example.SocialAccessibilityService")
         val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         return enabledServices?.contains(expectedComponentName.flattenToString()) == true
     }

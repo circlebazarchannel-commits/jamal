@@ -90,7 +90,7 @@ fun SocialMediaBlockerScreen(
     var infoDialogText by remember { mutableStateOf<String?>(null) }
 
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val expectedComponentName = android.content.ComponentName(context, SocialAccessibilityService::class.java)
+        val expectedComponentName = android.content.ComponentName(context.packageName, "com.example.SocialAccessibilityService")
         val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         val accessibilityEnabled = enabledServices?.contains(expectedComponentName.flattenToString()) == true
         val overlayEnabled = Settings.canDrawOverlays(context)
@@ -779,7 +779,7 @@ fun SocialMediaBlockerScreen(
     // Rounded corner platform permission request dialog
     if (showPermissionDialog) {
         val isAccessEnabled = run {
-            val expectedComponentName = android.content.ComponentName(context, SocialAccessibilityService::class.java)
+            val expectedComponentName = android.content.ComponentName(context.packageName, "com.example.SocialAccessibilityService")
             val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             enabledServices?.contains(expectedComponentName.flattenToString()) == true
         }

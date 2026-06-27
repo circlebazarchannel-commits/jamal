@@ -101,7 +101,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
             .putString("language", lang.code)
             .putString("selected_country_code", correspondingCountryCode)
             .apply()
-        com.example.widget.WidgetUtils.updateAllWidgets(appContext)
+        // com.example.widget.WidgetUtils.updateAllWidgets(appContext)
     }
 
     fun setSelectedCountryAndLanguage(countryCode: String) {
@@ -121,7 +121,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
             .putString("language", lang.code)
             .apply()
             
-        com.example.widget.WidgetUtils.updateAllWidgets(appContext)
+        // com.example.widget.WidgetUtils.updateAllWidgets(appContext)
     }
 
     fun setSelectedAdhan(context: Context, type: String) {

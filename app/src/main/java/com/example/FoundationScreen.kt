@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -526,7 +527,7 @@ fun FoundationScreen(onBack: () -> Unit) {
                     } else {
                         "হালাল সার্কেল ফাউন্ডেশনের সেবা কার্যক্রমকে দেশের গন্ডি পেরিয়ে বৈশ্বিক স্তরে ছড়িয়ে দেওয়া।"
                     },
-                    imageRes = R.drawable.img_dream_global_1782363964786
+                    imageRes = R.mipmap.ic_launcher
                 )
 
                 DreamCard(
@@ -536,7 +537,7 @@ fun FoundationScreen(onBack: () -> Unit) {
                     } else {
                         "আফ্রিকার অত্যন্ত অনগ্রসর ও গরীব অঞ্চলে সুপেয় বিশুদ্ধ পানির কূয়া স্থাপন, খাদ্য সামগ্রী এবং শিশু শিক্ষা সহায়তা বিতরণ।"
                     },
-                    imageRes = R.drawable.img_dream_africa_1782363983886
+                    imageRes = R.mipmap.ic_launcher
                 )
             }
 
