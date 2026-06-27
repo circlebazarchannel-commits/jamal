@@ -357,8 +357,25 @@ class MainActivity : ComponentActivity() {
                         }
 
                         val multiplePermissionsState = rememberMultiplePermissionsState(permissions)
+                        val navigationStack = remember { mutableStateListOf("home") }
                         var selectedTab by remember { mutableStateOf("home") }
                         
+                        fun navigate(target: String, isOverlay: Boolean = false) {
+                            val route = if (isOverlay) "overlay:$target" else target
+                            if (navigationStack.lastOrNull() != route) {
+                                navigationStack.add(route)
+                            }
+                        }
+
+                        fun handleBack() {
+                            if (navigationStack.size > 1) {
+                                navigationStack.removeAt(navigationStack.size - 1)
+                            } else if (navigationStack.firstOrNull() != "home") {
+                                navigationStack.clear()
+                                navigationStack.add("home")
+                            }
+                        }
+
                         var isAlarmPageOpen by remember { mutableStateOf(false) }
                         var isZakatPageOpen by remember { mutableStateOf(false) }
                         var isCalendarPageOpen by remember { mutableStateOf(false) }
@@ -371,6 +388,49 @@ class MainActivity : ComponentActivity() {
                         var isCreatePostOpen by remember { mutableStateOf(false) }
                         var isFoundationPageOpen by remember { mutableStateOf(false) }
                         var isProfileSubScreenOpen by remember { mutableStateOf(false) }
+
+                        // Synchronization logic
+                        LaunchedEffect(navigationStack.toList()) {
+                            val current = navigationStack.lastOrNull() ?: "home"
+                            
+                            // Reset overlays
+                            isAlarmPageOpen = false
+                            isZakatPageOpen = false
+                            isCalendarPageOpen = false
+                            isQiblaPageOpen = false
+                            isNotificationsPageOpen = false
+                            isAddAlarmPageOpen = false
+                            isParentalPageOpen = false
+                            isPrayerPageOpen = false
+                            isCreateCircleAlertOpen = false
+                            isCreatePostOpen = false
+                            isFoundationPageOpen = false
+                            isProfileSubScreenOpen = false
+                            
+                            navigationStack.forEach { route ->
+                                if (route.startsWith("overlay:")) {
+                                    when (route.substringAfter("overlay:")) {
+                                        "alarm" -> isAlarmPageOpen = true
+                                        "zakat" -> isZakatPageOpen = true
+                                        "calendar" -> isCalendarPageOpen = true
+                                        "qibla" -> isQiblaPageOpen = true
+                                        "notifications" -> isNotificationsPageOpen = true
+                                        "add_alarm" -> isAddAlarmPageOpen = true
+                                        "parental" -> isParentalPageOpen = true
+                                        "prayer" -> isPrayerPageOpen = true
+                                        "create_alert" -> isCreateCircleAlertOpen = true
+                                        "create_post" -> isCreatePostOpen = true
+                                        "foundation" -> isFoundationPageOpen = true
+                                    }
+                                } else {
+                                    selectedTab = route
+                                }
+                            }
+                        }
+
+                        androidx.activity.compose.BackHandler(enabled = navigationStack.size > 1 || (navigationStack.isNotEmpty() && navigationStack[0] != "home")) {
+                            handleBack()
+                        }
                         
                         val alarmViewModel: com.example.viewmodel.AlarmViewModel = remember { 
                             com.example.viewmodel.AlarmViewModel(context) 
@@ -380,14 +440,14 @@ class MainActivity : ComponentActivity() {
                         val activity = LocalContext.current as? androidx.activity.ComponentActivity
                         LaunchedEffect(activity?.intent) {
                             if (activity?.intent?.getBooleanExtra("open_notifications", false) == true) {
-                                isNotificationsPageOpen = true
+                                navigate("notifications", true)
                                 activity?.intent?.removeExtra("open_notifications")
                             }
                         }
                         DisposableEffect(activity) {
                             val listener = androidx.core.util.Consumer<Intent> { newIntent ->
                                 if (newIntent.getBooleanExtra("open_notifications", false)) {
-                                    isNotificationsPageOpen = true
+                                    navigate("notifications", true)
                                     newIntent.removeExtra("open_notifications")
                                 }
                             }
@@ -426,19 +486,7 @@ class MainActivity : ComponentActivity() {
                             bottomBar = { 
                                 if (showBottomBar) {
                                     AppBottomNavigation(selectedTab, isDark = isDarkStatusBar) { 
-                                        selectedTab = it 
-                                        if (isProfileOverlayOpen) {
-                                            isAlarmPageOpen = false
-                                            isZakatPageOpen = false
-                                            isCalendarPageOpen = false
-                                            isQiblaPageOpen = false
-                                            isNotificationsPageOpen = false
-                                            isAddAlarmPageOpen = false
-                                            isParentalPageOpen = false
-                                            isPrayerPageOpen = false
-                                            isCreateCircleAlertOpen = false
-                                            isCreatePostOpen = false
-                                        }
+                                        navigate(it)
                                     } 
                                 }
                             }
@@ -464,97 +512,97 @@ class MainActivity : ComponentActivity() {
                                         HomeScreen(
                                             state = state,
                                             onToggleAlarm = { viewModel.toggleAlarm(context, it) },
-                                            onNavigateToPrayerDetails = { isPrayerPageOpen = true },
-                                            onNavigateToTracker = { selectedTab = "tracker" },
-                                            onNavigateToTasbih = { selectedTab = "tasbih" },
-                                            onNavigateToQuran = { selectedTab = "quran" },
-                                            onNavigateToLocation = { selectedTab = "location" },
-                                            onOpenAlarmPage = { isAlarmPageOpen = true },
-                                            onNavigateToZakat = { isZakatPageOpen = true },
-                                            onNavigateToCalendar = { isCalendarPageOpen = true },
-                                            onNavigateToQibla = { isQiblaPageOpen = true },
-                                            onNavigateToTools = { selectedTab = "tools" },
-                                            onNavigateToAllahNames = { selectedTab = "allah_names" },
-                                            onNavigateToRamadan = { selectedTab = "ramadan" },
-                                            onNavigateToDua = { selectedTab = "dua" },
-                                            onNavigateToHadith = { selectedTab = "hadith" },
-                                            onOpenNotificationsPage = { isNotificationsPageOpen = true },
-                                            onNavigateToCreatePost = { isCreatePostOpen = true },
-                                            onOpenFoundationPage = { isFoundationPageOpen = true },
-                                            onNavigateToProfile = { selectedTab = "profile" }
+                                            onNavigateToPrayerDetails = { navigate("prayer", true) },
+                                            onNavigateToTracker = { navigate("tracker") },
+                                            onNavigateToTasbih = { navigate("tasbih") },
+                                            onNavigateToQuran = { navigate("quran") },
+                                            onNavigateToLocation = { navigate("location") },
+                                            onOpenAlarmPage = { navigate("alarm", true) },
+                                            onNavigateToZakat = { navigate("zakat", true) },
+                                            onNavigateToCalendar = { navigate("calendar", true) },
+                                            onNavigateToQibla = { navigate("qibla", true) },
+                                            onNavigateToTools = { navigate("tools") },
+                                            onNavigateToAllahNames = { navigate("allah_names") },
+                                            onNavigateToRamadan = { navigate("ramadan") },
+                                            onNavigateToDua = { navigate("dua") },
+                                            onNavigateToHadith = { navigate("hadith") },
+                                            onOpenNotificationsPage = { navigate("notifications", true) },
+                                            onNavigateToCreatePost = { navigate("create_post", true) },
+                                            onOpenFoundationPage = { navigate("foundation", true) },
+                                            onNavigateToProfile = { navigate("profile") }
                                         )
                                     } else if (selectedTab == "location") {
                                         LocationSelectionScreen(
                                             viewModel = viewModel,
-                                            onBack = { selectedTab = "home" }
+                                            onBack = { handleBack() }
                                         )
                                     } else if (selectedTab == "quran") {
-                                        QuranScreen(onBack = { selectedTab = "home" })
+                                        QuranScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "dua") {
-                                        DuaScreen(onBack = { selectedTab = "home" })
+                                        DuaScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "hadith") {
-                                        HadithScreen(onBack = { selectedTab = "tools" })
+                                        HadithScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "tracker") {
-                                        TrackerScreen(onNavigateToProfile = { selectedTab = "profile" })
+                                        TrackerScreen(onNavigateToProfile = { navigate("profile") })
                                     } else if (selectedTab == "tools") {
                                         ToolsScreen(
-                                            onNavigateToTracker = { selectedTab = "tracker" },
-                                            onNavigateToTasbih = { selectedTab = "tasbih" },
-                                            onNavigateToQuran = { selectedTab = "quran" },
-                                            onNavigateToZakat = { isZakatPageOpen = true },
-                                            onNavigateToCalendar = { isCalendarPageOpen = true },
-                                            onNavigateToQibla = { isQiblaPageOpen = true },
-                                            onNavigateToAllahNames = { selectedTab = "allah_names" },
-                                            onNavigateToRamadan = { selectedTab = "ramadan" },
-                                            onNavigateToDuroodReminder = { selectedTab = "durood_reminder" },
-                                            onNavigateToDua = { selectedTab = "dua" },
-                                            onNavigateToHadith = { selectedTab = "hadith" },
-                                            onNavigateToWidgets = { selectedTab = "widgets" },
-                                            onNavigateToIslamicNames = { selectedTab = "islamic_names" },
-                                            onNavigateToSocialVideos = { selectedTab = "social_videos" },
-                                            onNavigateToMosqueFinder = { selectedTab = "mosque_finder" },
-                                            onNavigateToProfile = { selectedTab = "profile" }
+                                            onNavigateToTracker = { navigate("tracker") },
+                                            onNavigateToTasbih = { navigate("tasbih") },
+                                            onNavigateToQuran = { navigate("quran") },
+                                            onNavigateToZakat = { navigate("zakat", true) },
+                                            onNavigateToCalendar = { navigate("calendar", true) },
+                                            onNavigateToQibla = { navigate("qibla", true) },
+                                            onNavigateToAllahNames = { navigate("allah_names") },
+                                            onNavigateToRamadan = { navigate("ramadan") },
+                                            onNavigateToDuroodReminder = { navigate("durood_reminder") },
+                                            onNavigateToDua = { navigate("dua") },
+                                            onNavigateToHadith = { navigate("hadith") },
+                                            onNavigateToWidgets = { navigate("widgets") },
+                                            onNavigateToIslamicNames = { navigate("islamic_names") },
+                                            onNavigateToSocialVideos = { navigate("social_videos") },
+                                            onNavigateToMosqueFinder = { navigate("mosque_finder") },
+                                            onNavigateToProfile = { navigate("profile") }
                                         )
                                     } else if (selectedTab == "social_videos") {
                                         com.example.social.SocialVideosScreen(
-                                            onBack = { selectedTab = "home" }
+                                            onBack = { handleBack() }
                                         )
                                     } else if (selectedTab == "mosque_finder") {
-                                        com.example.ui.MosqueFinderScreen(onBack = { selectedTab = "tools" })
+                                        com.example.ui.MosqueFinderScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "tasbih") {
-                                        TasbihScreen(onBack = { selectedTab = "tools" })
+                                        TasbihScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "widgets") {
-                                        HomeScreenWidgetsScreen(onBack = { selectedTab = "tools" })
+                                        HomeScreenWidgetsScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "durood_reminder") {
-                                        DuroodReminderScreen(onBack = { selectedTab = "tools" })
+                                        DuroodReminderScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "islamic_names") {
-                                        IslamicNamesScreen(onBack = { selectedTab = "tools" })
+                                        IslamicNamesScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "ramadan") {
-                                        RamadanScreen(state = state, onBack = { selectedTab = "tools" })
+                                        RamadanScreen(state = state, onBack = { handleBack() })
                                     } else if (selectedTab == "allah_names") {
-                                        NamesOfAllahScreen(onBack = { selectedTab = "tools" })
+                                        NamesOfAllahScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "profile") {
                                         ProfileScreen(
-                                            onNavigateToTracker = { selectedTab = "tracker" },
-                                            onNavigateToSettings = { selectedTab = "settings" },
-                                            onNavigateToParentalControl = { isParentalPageOpen = true },
-                                            onNavigateToSavedDuas = { selectedTab = "saved_duas" },
-                                            onNavigateToSavedAyahs = { selectedTab = "saved_ayahs" },
-                                            onNavigateToSavedHadiths = { selectedTab = "saved_hadiths" },
+                                            onNavigateToTracker = { navigate("tracker") },
+                                            onNavigateToSettings = { navigate("settings") },
+                                            onNavigateToParentalControl = { navigate("parental", true) },
+                                            onNavigateToSavedDuas = { navigate("saved_duas") },
+                                            onNavigateToSavedAyahs = { navigate("saved_ayahs") },
+                                            onNavigateToSavedHadiths = { navigate("saved_hadiths") },
                                             onToggleBottomBar = { isProfileSubScreenOpen = !it }
                                         )
                                     } else if (selectedTab == "saved_duas") {
-                                        SavedDuasScreen(onBack = { selectedTab = "profile" })
+                                        SavedDuasScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "saved_ayahs") {
-                                        SavedAyahsScreen(onBack = { selectedTab = "profile" })
+                                        SavedAyahsScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "saved_hadiths") {
-                                        SavedHadithsScreen(onBack = { selectedTab = "profile" })
+                                        SavedHadithsScreen(onBack = { handleBack() })
                                     } else if (selectedTab == "settings") {
                                         SettingsScreen(
                                             viewModel = settingsViewModel,
                                             prayerAlarms = state.alarms,
                                             onTogglePrayerAlarm = { alarmId -> viewModel.toggleAlarm(context, alarmId) },
-                                            onBack = { selectedTab = "profile" }
+                                            onBack = { handleBack() }
                                         )
                                     } else {
                                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -574,15 +622,15 @@ class MainActivity : ComponentActivity() {
                                         exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut()
                                     ) {
                                         ParentalControlScreen(
-                                            onBack = { isParentalPageOpen = false }
+                                            onBack = { handleBack() }
                                         )
                                     }
                                 }
 
                                 if (isAlarmPageOpen) {
                                     AlarmSetupScreen(
-                                        onBack = { isAlarmPageOpen = false },
-                                        onAddAlarmClick = { isAddAlarmPageOpen = true },
+                                        onBack = { handleBack() },
+                                        onAddAlarmClick = { navigate("add_alarm", true) },
                                         alarms = userAlarms,
                                         onToggleAlarm = { alarmViewModel.toggleAlarm(it) },
                                         onDeleteAlarm = { alarmViewModel.deleteAlarm(it) }
@@ -590,33 +638,33 @@ class MainActivity : ComponentActivity() {
                                 }
                                 if (isAddAlarmPageOpen) {
                                     AddAlarmScreen(
-                                        onBack = { isAddAlarmPageOpen = false },
+                                        onBack = { handleBack() },
                                         onSave = { alarmViewModel.addAlarm(it) }
                                     )
                                 }
                                 if (isZakatPageOpen) {
                                     ZakatCalculatorScreen(
-                                        onBack = { isZakatPageOpen = false }
+                                        onBack = { handleBack() }
                                     )
                                 }
                                 if (isCalendarPageOpen) {
                                     CalendarScreen(
-                                        onBack = { isCalendarPageOpen = false }
+                                        onBack = { handleBack() }
                                     )
                                 }
                                 if (isNotificationsPageOpen) {
                                      NotificationsScreen(
-                                         onBack = { isNotificationsPageOpen = false }
+                                         onBack = { handleBack() }
                                      )
                                  }
                                  if (isFoundationPageOpen) {
                                      FoundationScreen(
-                                         onBack = { isFoundationPageOpen = false }
+                                         onBack = { handleBack() }
                                      )
                                  }
                                  if (isQiblaPageOpen) {
                                     QiblaCompassScreen(
-                                        onBack = { isQiblaPageOpen = false }
+                                        onBack = { handleBack() }
                                     )
                                 }
                                 AnimatedVisibility(
@@ -626,9 +674,9 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     PrayerScreen(
                                         state = state,
-                                        onBack = { isPrayerPageOpen = false },
+                                        onBack = { handleBack() },
                                         onToggleAlarm = { alarmId -> viewModel.toggleAlarm(context, alarmId) },
-                                        onOpenAlarmPage = { isAlarmPageOpen = true }
+                                        onOpenAlarmPage = { navigate("alarm", true) }
                                     )
                                 }
                                 AnimatedVisibility(
@@ -638,7 +686,7 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     CreateCircleAlertScreen(
                                         savedLocation = state.locationName.ifEmpty { "All Bangladesh" }, // Get location from state
-                                        onBack = { isCreateCircleAlertOpen = false },
+                                        onBack = { handleBack() },
                                         onSubmit = { alert ->
                                                // Optional: submit to server
                                         }
@@ -650,7 +698,7 @@ class MainActivity : ComponentActivity() {
                                     exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }, animationSpec = androidx.compose.animation.core.tween(400)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(400))
                                 ) {
                                     com.example.social.CreatePostScreen(
-                                        onNavigateBack = { isCreatePostOpen = false }
+                                        onNavigateBack = { handleBack() }
                                     )
                                 }
                             }

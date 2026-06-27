@@ -71,9 +71,6 @@ android {
   kotlinOptions {
     jvmTarget = "11"
   }
-  kotlin {
-    jvmToolchain(11)
-  }
   buildFeatures {
     compose = true
     buildConfig = true
@@ -123,10 +120,10 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai)
-  implementation(platform(libs.supabase.bom))
-  implementation(libs.supabase.auth)
-  implementation(libs.supabase.postgrest)
-  implementation(libs.supabase.storage)
+  // implementation(platform(libs.supabase.bom))
+  // implementation(libs.supabase.auth)
+  // implementation(libs.supabase.postgrest)
+  // implementation(libs.supabase.storage)
   // Removed minio dependency
   implementation(libs.ktor.client.android)
   implementation(libs.ktor.client.content.negotiation)

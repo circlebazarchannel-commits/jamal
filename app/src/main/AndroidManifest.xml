@@ -54,6 +54,7 @@
             </intent-filter>
         </service>
 
+<!--
         <service
             android:name=".SocialAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -66,6 +67,7 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+-->
 
         <activity
             android:name=".MainActivity"
@@ -119,7 +121,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Prayer Times Widget -->
+<!--
         <receiver
             android:name="com.example.widget.PrayerTimesWidgetProvider"
             android:exported="true">
@@ -131,7 +133,6 @@
                 android:resource="@xml/prayer_times_widget_info" />
         </receiver>
 
-        <!-- Next Prayer Countdown Widget -->
         <receiver
             android:name="com.example.widget.NextPrayerWidgetProvider"
             android:exported="true">
@@ -143,7 +144,6 @@
                 android:resource="@xml/next_prayer_widget_info" />
         </receiver>
 
-        <!-- Sunrise/Sunset Widget -->
         <receiver
             android:name="com.example.widget.SunriseSunsetWidgetProvider"
             android:exported="true">
@@ -155,7 +155,6 @@
                 android:resource="@xml/sunrise_sunset_widget_info" />
         </receiver>
 
-        <!-- Sunrise Widget -->
         <receiver
             android:name="com.example.widget.SunriseWidgetProvider"
             android:exported="true">
@@ -167,7 +166,6 @@
                 android:resource="@xml/sunrise_widget_info" />
         </receiver>
 
-        <!-- Sunset Widget -->
         <receiver
             android:name="com.example.widget.SunsetWidgetProvider"
             android:exported="true">
@@ -179,7 +177,6 @@
                 android:resource="@xml/sunset_widget_info" />
         </receiver>
 
-        <!-- Date Widget -->
         <receiver
             android:name="com.example.widget.DateWidgetProvider"
             android:exported="true">
@@ -190,6 +187,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/date_widget_info" />
         </receiver>
+-->
 
         <service
             android:name=".SocialBlockerService"
