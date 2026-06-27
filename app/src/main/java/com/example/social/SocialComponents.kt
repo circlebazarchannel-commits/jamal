@@ -142,7 +142,23 @@ fun VideoFeedSection() {
             // First fetch from Supabase
             val posts = com.example.Supabase.client.postgrest["posts"]
                 .select().decodeList<Post>()
-            fetchedPosts = posts.sortedByDescending { it.createdAt }
+            val profiles = try {
+                com.example.Supabase.client.postgrest["profiles"]
+                    .select().decodeList<com.example.model.UserProfile>()
+            } catch (pe: Exception) {
+                pe.printStackTrace()
+                emptyList()
+            }
+            val profileMap = profiles.associateBy { it.id }
+            val mappedPosts = posts.map { post ->
+                val prof = profileMap[post.userId]
+                if (prof != null && !prof.data1.isNullOrEmpty()) {
+                    post.copy(userName = prof.data1)
+                } else {
+                    post
+                }
+            }
+            fetchedPosts = mappedPosts.sortedByDescending { it.createdAt }
             com.example.social.GlobalPostState.setPosts(fetchedPosts)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -625,7 +641,7 @@ fun CreatePostScreen(
                                          mediaUrl = finalUrl,
                                          title = titleInput,
                                          description = descriptionInput,
-                                         userName = user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User"
+                                         userName = context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE).getString("user_name", "")?.takeIf { it.isNotEmpty() } ?: (user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User")
                                      )
                                      
                                      try {
@@ -717,12 +733,28 @@ fun SocialVideosScreen(
             try {
                 val fetched = com.example.Supabase.client.postgrest["posts"]
                     .select().decodeList<Post>()
+                val profiles = try {
+                    com.example.Supabase.client.postgrest["profiles"]
+                        .select().decodeList<com.example.model.UserProfile>()
+                } catch (pe: Exception) {
+                    pe.printStackTrace()
+                    emptyList()
+                }
+                val profileMap = profiles.associateBy { it.id }
+                val mappedFetched = fetched.map { post ->
+                    val prof = profileMap[post.userId]
+                    if (prof != null && !prof.data1.isNullOrEmpty()) {
+                        post.copy(userName = prof.data1)
+                    } else {
+                        post
+                    }
+                }
                 // Filter only videos or mp4 urls
-                posts = fetched.filter { 
+                posts = mappedFetched.filter { 
                     it.mediaType == "video" || 
                     (it.mediaUrl.isNotEmpty() && it.mediaUrl.contains(".mp4", ignoreCase = true))
                 }.sortedByDescending { it.createdAt }
-                GlobalPostState.setPosts(fetched) // Sync to global
+                GlobalPostState.setPosts(mappedFetched) // Sync to global
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -854,21 +886,6 @@ fun SocialVideosScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        // Profile
-                        com.example.ProfileLogoDisplay(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .border(1.5.dp, Color.White, CircleShape)
-                                .clickable {
-                                    GlobalPostState.selectedCreatorId = post.userId
-                                    GlobalPostState.selectedCreatorName = post.userName
-                                    GlobalPostState.selectedCreatorAvatar = post.userAvatar
-                                },
-                            userId = post.userId,
-                            initialImageUrl = post.userAvatar ?: "",
-                            showBorder = true
-                        )
-
                         // Likes
                         val localContextForLikes = androidx.compose.ui.platform.LocalContext.current
                         val likedByMe = GlobalPostState.isPostLiked(localContextForLikes, post.id)
@@ -1857,7 +1874,7 @@ fun UploadVideoScreen(
                                       mediaUrl = finalUrl,
                                       title = titleInput,
                                       description = "", // No description box present
-                                      userName = user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User"
+                                      userName = context.getSharedPreferences("profile_prefs", android.content.Context.MODE_PRIVATE).getString("user_name", "")?.takeIf { it.isNotEmpty() } ?: (user?.userMetadata?.get("full_name")?.toString()?.replace("\"", "") ?: "User")
                                   )
                                   
                                   try {

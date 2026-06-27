@@ -113,24 +113,15 @@ object GlobalPostState {
         if (postId in postLikesCount) {
             return postLikesCount[postId]!!
         }
-        val prefs = context.getSharedPreferences("social_prefs", android.content.Context.MODE_PRIVATE)
-        val defaultCount = (postId.hashCode().coerceAtLeast(0) % 45) + 5
-        val savedCount = prefs.getInt("post_like_count_$postId", defaultCount)
-        postLikesCount[postId] = savedCount
-        return savedCount
+        val isLiked = isPostLiked(context, postId)
+        val count = if (isLiked) 1 else 0
+        postLikesCount[postId] = count
+        return count
     }
 
     fun likePost(context: android.content.Context, postId: String, liked: Boolean) {
         postLikes[postId] = liked
-        val currentCount = getLikeCount(context, postId)
-        val baseLiked = isPostLiked(context, postId)
-        
-        // Ensure user can only like once
-        val newCount = if (liked) {
-            currentCount + 1
-        } else {
-            (currentCount - 1).coerceAtLeast(0)
-        }
+        val newCount = if (liked) 1 else 0
         postLikesCount[postId] = newCount
         
         val prefs = context.getSharedPreferences("social_prefs", android.content.Context.MODE_PRIVATE)
