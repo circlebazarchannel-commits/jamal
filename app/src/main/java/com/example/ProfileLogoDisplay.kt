@@ -58,7 +58,8 @@ fun ProfileLogoDisplay(
         }
     }
 
-    LaunchedEffect(userId) {
+    DisposableEffect(userId) {
+        var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
         if (userId.isNotEmpty()) {
             // First set to local value if it belongs to current user
             if (userId == currentUserId) {
@@ -68,9 +69,13 @@ fun ProfileLogoDisplay(
 
             // Always attempt to fetch from Firestore to stay synced and recover lost local data
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            db.collection("users").document(userId).get()
-                .addOnSuccessListener { doc ->
-                    if (doc.exists()) {
+            
+            listenerRegistration = db.collection("users").document(userId)
+                .addSnapshotListener { doc, error ->
+                    if (error != null) {
+                        return@addSnapshotListener
+                    }
+                    if (doc != null && doc.exists()) {
                         val img = doc.getString("profileImageUrl") ?: ""
                         val index = doc.getLong("selectedLogoIndex")?.toInt() ?: 0
                         uploaderImageUrl = img
@@ -85,6 +90,10 @@ fun ProfileLogoDisplay(
                         }
                     }
                 }
+        }
+        
+        onDispose {
+            listenerRegistration?.remove()
         }
     }
 

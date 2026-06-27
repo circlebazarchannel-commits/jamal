@@ -1133,58 +1133,20 @@ fun EditProfileScreen(
                             onSuccess = { croppedUri ->
                                 coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                     try {
-                                        val copiedFile = java.io.File(croppedUri.path ?: "")
-                                        val fileUriStr = croppedUri.toString()
+                                        val finalUrl = com.example.network.R2Uploader.uploadFile(
+                                            context = context,
+                                            fileUri = croppedUri,
+                                            ext = "jpg",
+                                            onProgress = { }
+                                        )
+                                        
                                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                            editCustomAvatarUri = fileUriStr
-                                        }
-                                        
-                                        val chatId = "-1002647379129"
-                                        val botToken = "8968904429:AAE3Ce849ysMuaxQhdMebsBwyB_nlIPQ1Os"
-                                        val client = OkHttpClient.Builder()
-                                            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                                            .build()
-                                            
-                                        val bodyBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
-                                            .addFormDataPart("chat_id", chatId)
-                                            .addFormDataPart("caption", "👤 **নতুন প্রোফাইল ছবি আপডেট করা হয়েছে!**\n\n**ব্যবহারকারীর নাম:** $editName")
-                                            
-                                        val fileBody = RequestBody.create("image/jpeg".toMediaTypeOrNull(), copiedFile)
-                                        bodyBuilder.addFormDataPart("photo", "profile.jpg", fileBody)
-                                        
-                                        val request = Request.Builder()
-                                            .url("https://api.telegram.org/bot$botToken/sendPhoto")
-                                            .post(bodyBuilder.build())
-                                            .build()
-                                            
-                                        client.newCall(request).execute().use { response ->
-                                            val responseBody = response.body?.string()
-                                            android.util.Log.d("TelegramProfilePic", "Upload success: ${response.isSuccessful}, body: $responseBody")
-                                            if (response.isSuccessful && responseBody != null) {
-                                                val json = org.json.JSONObject(responseBody)
-                                                if (json.optBoolean("ok")) {
-                                                    val result = json.optJSONObject("result")
-                                                    val photoArray = result?.optJSONArray("photo")
-                                                    if (photoArray != null && photoArray.length() > 0) {
-                                                        val lastPhoto = photoArray.optJSONObject(photoArray.length() - 1)
-                                                        val fileId = lastPhoto?.optString("file_id") ?: ""
-                                                        if (fileId.isNotEmpty()) {
-                                                            val proxyUrl = "https://script.google.com/macros/s/AKfycbyse-oVHrCgGjsCtN7q_TaCEf6YIGKxWkpjL9ILq_Uems0odlikDcO9dAIUMWTlWQ4B8Q/exec"
-                                                            val webUrl = "$proxyUrl?action=stream&file_id=$fileId"
-                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                                editCustomAvatarUri = webUrl
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                throw Exception("HTTP ${response.code}: $responseBody")
-                                            }
+                                            editCustomAvatarUri = finalUrl
                                         }
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                            Toast.makeText(context, "টেলিগ্রামে ফটো পাঠাতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "সার্ভারে ফটো আপলোড করতে ব্যর্থ হয়েছে: ${e.message}", Toast.LENGTH_SHORT).show()
                                         }
                                     } finally {
                                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

@@ -773,31 +773,7 @@ fun SocialVideosScreen(
             .fillMaxSize()
             .background(Color.Black) // Classic dark TikTok aesthetic
     ) {
-        // Header with "For you" / "Following"
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 40.dp)
-                .zIndex(1f),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (isEnglish) "Following" else "ফলোয়িং",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(modifier = Modifier.size(6.dp).background(Color.White, CircleShape))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = if (isEnglish) "For you" else "আপনার জন্য",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -1117,50 +1093,37 @@ fun SocialVideosScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-
-                // Profile logo display on the left
-                val currentUserId = com.example.Supabase.client.auth.currentUserOrNull()?.id ?: "anonymous_user"
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, Color.White, CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable {
-                            showMyProfile = true
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    com.example.ProfileLogoDisplay(
-                        modifier = Modifier.fillMaxSize(),
-                        userId = currentUserId,
-                        showBorder = false
-                    )
-                }
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(16.dp))
             }
 
-            Text(
-                text = if (isEnglish) "Short Reels" else "শর্ট রিলস",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = if (isEnglish) "Following" else "ফলোয়িং",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Box(modifier = Modifier.size(4.dp).background(Color.White.copy(alpha = 0.5f), CircleShape))
+                Text(
+                    text = if (isEnglish) "For you" else "আপনার জন্য",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
 
             IconButton(
                 onClick = { handleUploadClick() },
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
-                Icon(Icons.Default.CameraAlt, contentDescription = "Upload Video", tint = Color.White)
+                Icon(Icons.Default.CameraAlt, contentDescription = "Upload Video", tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
 
