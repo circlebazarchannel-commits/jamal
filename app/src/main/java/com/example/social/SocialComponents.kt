@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -520,7 +521,7 @@ fun CreatePostScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextDark)
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextDark, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text("Create Post", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextDark)
@@ -772,6 +773,31 @@ fun SocialVideosScreen(
             .fillMaxSize()
             .background(Color.Black) // Classic dark TikTok aesthetic
     ) {
+        // Header with "For you" / "Following"
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 40.dp)
+                .zIndex(1f),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isEnglish) "Following" else "ফলোয়িং",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(modifier = Modifier.size(6.dp).background(Color.White, CircleShape))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isEnglish) "For you" else "আপনার জন্য",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -816,9 +842,9 @@ fun SocialVideosScreen(
                     onClick = { handleUploadClick() },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isEnglish) "Upload Reel" else "ভিডিও আপলোড করুন", fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Upload Reel" else "ভিডিও আপলোড করুন", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
@@ -936,6 +962,23 @@ fun SocialVideosScreen(
                             VideoCommentsDialog(
                                 postId = post.id,
                                 onDismiss = { showCommentSheet = false }
+                            )
+                        }
+
+                        // Save Button
+                        IconButton(
+                            onClick = {
+                                android.widget.Toast.makeText(localContext, if (isEnglish) "Saved!" else "সংরক্ষণ করা হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier
+                                .size(45.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BookmarkBorder,
+                                contentDescription = "Save",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
@@ -1082,7 +1125,7 @@ fun SocialVideosScreen(
                     onClick = onBack,
                     modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
                 // Profile logo display on the left
